@@ -15,7 +15,7 @@ set format y '%.2fv'
 set format x '%H:%M'
 set xtics offset 0,0.25 rotate 
 set ytics offset 1,0
-
+set yrange [3.2:4.3]
 
 #data
 set datafile separator ";"
