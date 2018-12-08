@@ -179,7 +179,7 @@ int main(int argc, char* argv[]){
 					temp_filehandle = fopen("vbat.log","wb"); 																																											//open log file
 					fprintf(temp_filehandle,"%.2f",vbat_value);																																											//write log
 					fclose(temp_filehandle);																																																				//close log file
-					if(battery_log_enabled){
+					if(battery_log_enabled&&vbat_value>1){
 						temp_filehandle = fopen("/proc/uptime","r");																																									//open sys file
 						fscanf(temp_filehandle,"%u",&uptime_value);																																										//read uptime value
 						fclose(temp_filehandle);																																																			//close sys file
