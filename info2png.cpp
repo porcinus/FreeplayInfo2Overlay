@@ -1,6 +1,8 @@
+ /* Bring in gd library functions */
 #include "gd.h"
-#include <gdfontt.h> 
+#include <gdfontt.h> /*on va utiliser la police gdFontTiny */
 
+/* Bring in standard I/O so we can output the PNG to a file */
 #include <stdio.h>
 #include <cstring>
 
@@ -72,29 +74,31 @@ int gd_image_h = -1;						//gd image height
 
 
 
-FILE *temp_filehandle;					//file handle to get cpu temp/usage
-int i2c_handle;           			//i2c handle io
-char i2c_buffer[10] = {0};			//i2c data buffer
-int adc_value = 0;							//adc step value
-float vbat_value = 0.;					//battery voltage
-char gd_vbat_chararray[14];			//battery voltage gd string
-char gd_cpu_chararray[9];				//cpu gd string
-char gd_cpuload_chararray[5];		//cpu load gd string
-char gd_wifi_chararray[10];			//time wifi string
-char gd_time_chararray[6];			//time gd string
-int cpu_value = 0;							//cpu temp
-char cpu_buf[7];								//cpu read buffer
-int cpuload_value = 0;					//cpu load
-bool battery_enabled = true;		//battery probe boolean
-bool wifi_enabled = false;			//wifi boolean
-int wifi_linkspeed = 0;					//wifi link speed
-char pbuffer[20];								//buffer use to read process pipe
+FILE *temp_filehandle;						//file handle to get cpu temp/usage
+int i2c_handle;           				//i2c handle io
+char i2c_buffer[10] = {0};				//i2c data buffer
+int adc_value = 0;								//adc step value
+float vbat_value = 0.;						//battery voltage
+char gd_vbat_chararray[14];				//battery voltage gd string
+char gd_cpu_chararray[9];					//cpu gd string
+char gd_cpuload_chararray[5];			//cpu load gd string
+char gd_wifi_chararray[10];				//time wifi string
+char gd_time_chararray[6];				//time gd string
+int cpu_value = 0;								//cpu temp
+char cpu_buf[7];									//cpu read buffer
+int cpuload_value = 0;						//cpu load
+bool battery_enabled = true;			//battery probe boolean
+bool battery_log_enabled = false;	//battery log from start boolean
+int uptime_value = 0;							//uptime value
+bool wifi_enabled = false;				//wifi boolean
+int wifi_linkspeed = 0;						//wifi link speed
+char pbuffer[20];									//buffer use to read process pipe
 
-time_t now = time(0); 					//current date/time
-tm *ltime = localtime(&now); 		//localtime object
+time_t now = time(0); 						//current date/time
+tm *ltime = localtime(&now); 			//localtime object
 
 void show_usage(void){
-	printf("Example with battery: ./info2png -i2cbus \"/dev/i2c-1\" -i2caddress 0x4d -adcvref 3.65 -adcres 4096 -r1value 91 -r2value 220 -vbatlow 3.5 -width 304 -height 10 -o \"/home/pi/tmp/info2png\"\n");
+	printf("Example with battery: ./info2png -i2cbus \"/dev/i2c-1\" -i2caddress 0x4d -adcvref 3.65 -adcres 4096 -r1value 91 -r2value 220 -vbatlow 3.5 -vbatlogging -width 304 -height 10 -o \"/home/pi/tmp/info2png\"\n");
 	printf("Example without battery: ./info2png -width 304 -height 10 -o \"/home/pi/tmp/info2png\"\n");
 	printf("Options:\n");
 	printf("\t-i2cbus, path to i2c bus device\n");
@@ -104,9 +108,10 @@ void show_usage(void){
 	printf("\t-r1value, in ohm\n");
 	printf("\t-r2value, in ohm\n");
 	printf("\t-vbatlow, in volt, low battery voltage to set text in red color\n");
+	printf("\t-vbatlogging, enable battery voltage logging, data will be put in 'vbat-start.log', format 'uptime;vbat'\n");
 	printf("\t-width, in px, width of 'fb_footer.png'\n");
 	printf("\t-height, in px, height of 'fb_footer.png'\n");
-	printf("\t-o, output folder where 'vbat.log' and 'fb_footer.png'\n\n");
+	printf("\t-o, output folder where 'vbat.log', 'vbat-start.log' and 'fb_footer.png'\n\n");
 	printf("Resistor divider diagram:\n");
 	printf("\t(Battery) Vin--+\n");
 	printf("\t               R1\n");
@@ -131,12 +136,13 @@ int main(int argc, char* argv[]){
 		}else if(strcmp(argv[i],"-r1value")==0){divider_r1=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-r2value")==0){divider_r2=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-vbatlow")==0){vbatlow_value=atof(argv[i+1]);
+		}else if(strcmp(argv[i],"-vbatlogging")==0){battery_log_enabled=true;
 		}else if(strcmp(argv[i],"-width")==0){gd_image_w=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-height")==0){gd_image_h=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-o")==0){vbat_output_path=(char*)argv[i+1]; if(access(vbat_output_path,W_OK)!=0){printf("Failed, %s not writable\n",vbat_output_path);return 1;}}
 	}
 
-	if(i2c_address<0||adc_vref<0||adc_resolution<0||divider_r1<0||divider_r2<0||vbatlow_value<0){battery_enabled=false;printf("Warning, some arguments needed to get battery data are not set\n");} //user miss some arguments for battery
+	if(i2c_address<0||adc_vref<0||adc_resolution<0||divider_r1<0||divider_r2<0||vbatlow_value<0){battery_enabled=false;battery_log_enabled=false;printf("Warning, some arguments needed to get battery data are not set\n");} //user miss some arguments for battery
 	if(gd_image_w<0||gd_image_h<0||vbat_output_path==NULL){printf("Failed, missing image size or path output\n");show_usage();return 1;} //user miss some needed arguments
 	
 	
@@ -173,6 +179,15 @@ int main(int argc, char* argv[]){
 					temp_filehandle = fopen("vbat.log","wb"); 																																											//open log file
 					fprintf(temp_filehandle,"%.2f",vbat_value);																																											//write log
 					fclose(temp_filehandle);																																																				//close log file
+					if(battery_log_enabled){
+						temp_filehandle = fopen("/proc/uptime","r");																																									//open sys file
+						fscanf(temp_filehandle,"%u",&uptime_value);																																										//read uptime value
+						fclose(temp_filehandle);																																																			//close sys file
+						
+						temp_filehandle = fopen("vbat-start.log","a+");																																								//open log file
+						fprintf(temp_filehandle,"%u;%.2f\n",uptime_value,vbat_value);																																	//write log
+						fclose(temp_filehandle);																																																			//close log file
+					}
 				}
 			}
 		}
@@ -218,7 +233,7 @@ int main(int argc, char* argv[]){
 	fgets(cpu_buf, sizeof(cpu_buf),temp_filehandle);																																				//read value
 	fclose(temp_filehandle);																																																//close sys file
 	cpu_value=atoi(cpu_buf)/1000;																																														//compute temperature
-	snprintf(gd_cpu_chararray,sizeof(gd_cpu_chararray),"CPU:%i°c",cpu_value); 																							//prepare char array to render
+	snprintf(gd_cpu_chararray,sizeof(gd_cpu_chararray),"CPU:%iÂ°c",cpu_value); 																							//prepare char array to render
 	gd_col_tmp=rgbcolorstep(cpu_value,50,80,(int)0x0000ff00,(int)0x00ff0000); 																							//compute int color
 	gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF); 					//allocate gd color
 	gdImageString(gd_image,gdFontTiny,gd_x_cputemp,1,(unsigned char*)gd_cpu_chararray,gd_col_text);													//print cpu info to gd image
