@@ -8,6 +8,6 @@ Usage: Execute each program without argument to get informations.
 
 compile.sh : compile info2png, png2fb, nns-overlay-deamon
 
-example-framebuffer.sh : example to create and copy infomation to a framebuffer
+example-framebuffer.sh or example-nobattery-framebuffer.sh : example to create and copy infomation to a framebuffer
 
 example-overlay.sh : to use aside info2png, example to display information as a 'overlay' using omxplayer when pressing a gpio button, note: only work with gl and dispmanx
