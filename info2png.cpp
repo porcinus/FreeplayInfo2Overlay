@@ -109,8 +109,8 @@ bool wifi_enabled = false;				//wifi boolean
 int wifi_linkspeed = 0;						//wifi link speed
 char pbuffer[20];									//buffer use to read process pipe
 
-time_t now = time(0); 						//current date/time
-tm *ltime = localtime(&now); 			//localtime object
+time_t now; 											//current date/time
+tm *ltime; 												//localtime object
 
 void show_usage(void){
 	printf("Example with battery: ./info2png -i2cbus \"/dev/i2c-1\" -i2caddress 0x4d -adcvref 3.65 -adcres 4096 -r1value 91 -r2value 220 -vbatlow 3.5 -vbatlogging -width 304 -height 10 -o \"/dev/shm\"\n");
@@ -176,6 +176,9 @@ int main(int argc, char* argv[]){
 	
 	
 	while(true){
+		now = time(0); 						//current date/time
+		ltime = localtime(&now); 			//localtime object
+		
 		//Check if WIFI is working
 		if(access("/sbin/iw",F_OK)!=-1){ 																																													//check if 'iw' is installed
 			temp_filehandle = popen("iw dev wlan0 link 2> /dev/null | grep bitrate | cut -f 2 -d \":\" | cut -f 1 -d \"M\"", "r");	//open process pipe
