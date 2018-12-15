@@ -1,0 +1,15 @@
+Note before start: You have to edit wanted .service and .sh files in order to get script work.
+
+Choose right file: 
+ - info2framebuffer.sh and info2framebuffer.service : When using ADC to monitor battery voltage, copy informations 16bit framebuffer (/dev/fb1)
+ - info2overlay.sh and info2overlay.service : When using ADC to monitor battery voltage, when specific gpio input is pressed, start omxplayer with a specific subtitle to create a 'osd', Note: only work with gl and dispmanx
+ - info2framebuffer-nobattery.sh and info2framebuffer-nobattery.service : Copy some system informations to 16bit framebuffer (/dev/fb1)
+ - info2overlay-nobattery.sh and info2overlay-nobattery.service : When specific gpio input is pressed, start omxplayer with a specific subtitle to create a 'osd', Note: only work with gl and dispmanx
+
+To install as a service:
+cp [WANTEDSERVICE].service /lib/systemd/system/[WANTEDSERVICE].service
+systemctl enable [WANTEDSERVICE].service
+
+To remove the service:
+systemctl disable [WANTEDSERVICE].service
+rm /lib/systemd/system/[WANTEDSERVICE].service

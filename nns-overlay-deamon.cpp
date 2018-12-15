@@ -1,6 +1,6 @@
 /*
 NNS @ 2018
-nns-overlay-deamon
+nns-overlay-deamon v0.1b
 Use to create a 'OSD' on program running on gl or dispmanx driver
 */
 
@@ -21,6 +21,7 @@ int gpio_pin = -1;										//gpio pin
 char gpio_path[PATH_MAX];							//gpio full path to sysfs
 bool gpio_activelow=false;						//gpio active low
 char gpio_buffer[4];									//gpio read buffer
+int gpio_interval=-1;									//gpio check interval
 int gpio_value;												//gpio value
 char *str_path;												//full path to str file
 char program_path[PATH_MAX];					//full path to this program
@@ -31,9 +32,10 @@ char omx_exec_path[PATH_MAX];					//full command line to run omx
 
 
 void show_usage(void){
-	printf("Example : ./nns-overlay-deamon -pin 41 -srtfile \"/dev/shm/vbat.srt\" -screenwidth 1024 -height 50\n");
+	printf("Example : ./nns-overlay-deamon -pin 41 -interval 200 -srtfile \"/dev/shm/vbat.srt\" -screenwidth 1024 -height 50\n");
 	printf("Options:\n");
 	printf("\t-pin, pin number corresponding to input to monitor\n");
+	printf("\t-interval, optional, pin checking interval in msec\n");
 	printf("\t-srtfile, full path to str file, used for OSD\n");
 	printf("\t-screenwidth, screen width, used for OSD\n");
 	printf("\t-height, bar height, used for OSD\n");
@@ -41,18 +43,21 @@ void show_usage(void){
 
 int main(int argc, char *argv[]){
 	if(argc<9){show_usage();return 1;} //wrong arguments count
-	
 	if(access("/usr/bin/omxplayer",F_OK)!=0){printf("Failed, require OMXplayer\n");return 1;} //'omxplayer' is not installed
+	
+	sleep(2);
 	
 	for(int i=1;i<argc;++i){ //argument to variable
 		if(strcmp(argv[i],"-help")==0){show_usage();return 1;
 		}else if(strcmp(argv[i],"-pin")==0){gpio_pin=atoi(argv[i+1]);snprintf(gpio_path,sizeof(gpio_path),"/sys/class/gpio/gpio%i/",gpio_pin);
+		}else if(strcmp(argv[i],"-interval")==0){gpio_interval=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-srtfile")==0){str_path=(char*)argv[i+1]; if(access(str_path,R_OK)!=0){printf("Failed, %s not readable\n",str_path);return 1;}
 		}else if(strcmp(argv[i],"-screenwidth")==0){screen_width=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-height")==0){bar_height=atoi(argv[i+1]);}
 	}
 	
 	if(gpio_pin<0||screen_width<0||bar_height<0){printf("Failed, missing pin argument\n");show_usage();return 1;} //user miss some needed arguments
+	if(gpio_interval<100||gpio_interval>600){printf("Warning, wrong cheking interval set, setting it to 200msec\n");gpio_interval=200;} //wrong interval
 	
 	if(access(gpio_path,R_OK)!=0){ //gpio not accessible, try to export
 		printf("%s not accessible, trying export\n",gpio_path);
@@ -89,7 +94,7 @@ int main(int argc, char *argv[]){
 			chdir(program_path); //change directory
 			system(omx_exec_path); //run omxplayer
 		}
-		usleep(200*1000); //sleep 200ms
+		usleep(gpio_interval*1000); //sleep
 	}
 	
 	
