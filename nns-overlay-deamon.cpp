@@ -65,7 +65,8 @@ int main(int argc, char *argv[]){
 		if(access(gpio_path,R_OK)!=0){printf("Failed to export\n");return(1);}else{printf("Export with success\n");} //export gpio failed
 	}
 	
-	getcwd(program_path,sizeof(program_path)); //backup program path
+	//getcwd(program_path,sizeof(program_path)); //backup program path, for some reason, don't work when running as service
+	strncpy(program_path,argv[0],strlen(argv[0])-19); //backup program path, work when running as service
 	chdir(gpio_path); //change directory to gpio sysfs
 	/*
 	printf("program path:%s\n",program_path);
