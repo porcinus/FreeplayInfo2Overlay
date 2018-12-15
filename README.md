@@ -27,11 +27,11 @@ Choose right file:
  - info2overlay-nobattery.sh and info2overlay-nobattery.service : When specific gpio input is pressed, start omxplayer with a specific subtitle to create a 'osd', Note: only work with gl and dispmanx
 
 To install as a service:
-cp [WANTEDSERVICE].service /lib/systemd/system/[WANTEDSERVICE].service
+cp [WANTEDSERVICE].service /lib/systemd/system/[WANTEDSERVICE].service ; \
 systemctl enable [WANTEDSERVICE].service
 
 To remove the service:
-systemctl disable [WANTEDSERVICE].service
+systemctl disable [WANTEDSERVICE].service ; \
 rm /lib/systemd/system/[WANTEDSERVICE].service
 
 
