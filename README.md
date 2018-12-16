@@ -2,11 +2,11 @@
 
 These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform with L2R2 addon board.
 
-- info2png : Output battery voltage (if ADC and resistor divider data provided , cpu load and temperature, wifi link speed (if detected) and system time. Depending on arguments passed, can generate a png file, a log containing battery voltage, a avi file (REQUIRE ffmpeg).
+- info2png : Output battery voltage (if ADC and resistor divider data provided , cpu load and temperature, wifi link speed (if detected) and system time. Depending on arguments passed, can generate a png file, a log containing battery voltage.
 
 - png2fb16 : Copy a png file to a 16 bits framebuffer, to use aside of info2png.
 
-- nns-overlay-deamon : Use to monitor a gpio input, then start a omxplayer instance to create a ingame 'osd', to use aside of info2png, ONLY work with gl or dispmanx driver. REQUIRE omxplayer
+- nns-overlay-deamon : Use to monitor a gpio input, then start a omxplayer instance to create a ingame 'osd', to use aside of info2png, ONLY work with gl or dispmanx driver. REQUIRE omxplayer and ffmpeg.
 
 
 # Provided scripts :
