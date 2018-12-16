@@ -2,11 +2,11 @@
 
 These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform with L2R2 addon board.
 
-- info2png : Output battery voltage (if ADC and resistor divider data provided , cpu load and temperature, wifi link speed (if detected) and system time. Depending on arguments passed, can generate a png file, a log containing battery voltage, a srt file (omxplayer subtitle).
+- info2png : Output battery voltage (if ADC and resistor divider data provided , cpu load and temperature, wifi link speed (if detected) and system time. Depending on arguments passed, can generate a png file, a log containing battery voltage, a avi file (REQUIRE ffmpeg).
 
 - png2fb16 : Copy a png file to a 16 bits framebuffer, to use aside of info2png.
 
-- nns-overlay-deamon : Use to monitor a gpio input, then start a omxplayer instance to create a ingame 'osd', to use aside of info2png, ONLY work with gl or dispmanx driver.
+- nns-overlay-deamon : Use to monitor a gpio input, then start a omxplayer instance to create a ingame 'osd', to use aside of info2png, ONLY work with gl or dispmanx driver. REQUIRE omxplayer
 
 
 # Provided scripts :
@@ -25,8 +25,6 @@ Choose right file:
  - info2overlay.sh and info2overlay.service : When using ADC to monitor battery voltage, when specific gpio input is pressed, start omxplayer with a specific subtitle to create a 'osd', Note: only work with gl and dispmanx.
  - info2framebuffer-nobattery.sh and info2framebuffer-nobattery.service : Copy some system informations to 16bit framebuffer (/dev/fb1).
  - info2overlay-nobattery.sh and info2overlay-nobattery.service : When specific gpio input is pressed, start omxplayer with a specific subtitle to create a 'osd', Note: only work with gl and dispmanx.
- - info2overlay-framebuffer.sh and info2overlay-framebuffer.service : Combine framebuffer and 'osd' function.
- - info2overlay-framebuffer-nobattery.sh and info2overlay-framebuffer-nobattery.service : Combine framebuffer and 'osd' function with no battery monitoring.
 
 To install as a service:
 cp [WANTEDSERVICE].service /lib/systemd/system/[WANTEDSERVICE].service ; \

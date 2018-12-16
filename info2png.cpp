@@ -19,6 +19,7 @@ It create a PNG/log file contening CPU load and temperature, Wifi link speed and
 
 #include <ctime>
 #include <locale.h>
+#include <limits.h>
 
 /*
    #include <sys/time.h>
@@ -109,11 +110,16 @@ bool wifi_enabled = false;				//wifi boolean
 int wifi_linkspeed = 0;						//wifi link speed
 char pbuffer[20];									//buffer use to read process pipe
 
+bool video_enabled = true;				//generate avi file boolean
+int videolength = -1;							//video duration
+char ffmpeg_exec_path[PATH_MAX];	//full command line to run ffmpeg
+
+
 time_t now; 											//current date/time
 tm *ltime; 												//localtime object
 
 void show_usage(void){
-	printf("Example with battery: ./info2png -i2cbus \"/dev/i2c-1\" -i2caddress 0x4d -adcvref 3.65 -adcres 4096 -r1value 91 -r2value 220 -vbatlow 3.5 -vbatlogging -width 304 -height 10 -o \"/dev/shm\"\n");
+	printf("Example with battery: ./info2png -i2cbus \"/dev/i2c-1\" -i2caddress 0x4d -adcvref 3.65 -adcres 4096 -r1value 91 -r2value 220 -vbatlow 3.5 -vbatlogging -width 304 -height 10 -video 5 -o \"/dev/shm\"\n");
 	printf("Example without battery: ./info2png -width 304 -height 10 -o \"/dev/shm\"\n");
 	printf("Options:\n");
 	printf("\t-i2cbus, path to i2c bus device [Optional, used for battery voltage]\n");
@@ -126,6 +132,7 @@ void show_usage(void){
 	printf("\t-vbatlogging, enable battery voltage logging, data will be put in 'vbat-start.log', format 'uptime;vbat' [Optional, used for battery voltage monitoring]\n");
 	printf("\t-width, in px, width of 'fb_footer.png' [Optional, used for generate png]\n");
 	printf("\t-height, in px, height of 'fb_footer.png' [Optional, used for generate png]\n");
+	printf("\t-video, in sec, duration of 'fb_footer.avi', need generation of png file [Optional, used for generate avi file]\n");
   printf("\t-interval, [Optional] drawing interval in sec\n");
 	printf("\t-o, output folder where 'vbat.log', 'vbat-start.log', 'vbat.srt'  and 'fb_footer.png'\n\n");
 	
@@ -159,6 +166,7 @@ int main(int argc, char* argv[]){
 		}else if(strcmp(argv[i],"-vbatlogging")==0){battery_log_enabled=true;
 		}else if(strcmp(argv[i],"-width")==0){gd_image_w=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-height")==0){gd_image_h=atoi(argv[i+1]);
+		}else if(strcmp(argv[i],"-video")==0){videolength=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-interval")==0){draw_interval=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-o")==0){vbat_output_path=(char*)argv[i+1]; if(access(vbat_output_path,W_OK)!=0){printf("Failed, %s not writable\n",vbat_output_path);return 1;}}
 	}
@@ -167,6 +175,7 @@ int main(int argc, char* argv[]){
 	
 	if(vbat_output_path==NULL){printf("Failed, missing path output\n");show_usage();return 1;} //user miss some needed arguments
 	if(gd_image_w<1||gd_image_h<1){printf("Warning, missing image size, no png will be output\n");png_enabled=false;} //no png output
+	if(!png_enabled||videolength<1){printf("Warning, missing video duration, no avi will be output\n");video_enabled=false;} //no avi output
 	if(draw_interval<1){printf("Warning, wrong draw interval set, setting it to 15sec\n");draw_interval=15;} //wrong interval
 	
 	
@@ -304,9 +313,16 @@ int main(int argc, char* argv[]){
 			gdImagePng(gd_image,temp_filehandle);																																										//output gd image to file
 			fclose(temp_filehandle);																																																//close image file
 			gdImageDestroy(gd_image);																																																//free gd image memory
+			
+			if(video_enabled){
+				snprintf(ffmpeg_exec_path,sizeof(ffmpeg_exec_path),"nice -5 ffmpeg -loglevel panic -y -loop 1 -i fb_footer.png -t %i -r 5  -force_key_frames 1 -c:v mjpeg -f avi fb_footer.avi >/dev/null 2>&1",videolength); //parse command line for ffmpeg
+				system(ffmpeg_exec_path); //convert png to avi
+			}
+			
 		}
 	
 		//write str file for overlay
+		/* no more used
 		temp_filehandle = fopen("vbat.srt","wb"); 																																											//open log file
 		fprintf(temp_filehandle,"1\n00:00:00,00 --> 00:00:05,00\n");																																											//write log
 		if(battery_enabled){fprintf(temp_filehandle,"Battery:%.2fv - ",vbat_value);} //battery
@@ -314,7 +330,7 @@ int main(int argc, char* argv[]){
 		if(wifi_enabled){fprintf(temp_filehandle,"%iMBit/s - ",wifi_linkspeed);} //wifi
 		fprintf(temp_filehandle,"%02i:%02i",ltime->tm_hour,ltime->tm_min); //time
 		fclose(temp_filehandle);	
-	
+		*/
 	
 		sleep(draw_interval); //sleep
 	}
