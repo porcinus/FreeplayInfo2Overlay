@@ -112,9 +112,11 @@ chdir(gpio_path); //change directory to gpio sysfs
 	
 	//snprintf(omx_exec_path,sizeof(omx_exec_path),"omxplayer --no-osd --no-keys --alpha 150 --layer 2000 --win 0,0,%i,%i --align center --font-size 750 --no-ghost-box --subtitles \"%s\" \"%s/black.avi\" >/dev/null 2>&1",screen_width,bar_height,png_path,program_path); //parse command line for omx
 	
-	snprintf(ffmpeg_exec_path,sizeof(ffmpeg_exec_path),"nice -5 ffmpeg -loglevel panic -y -loop 1 -i fb_footer.png -t %i -r 5  -force_key_frames 1 -c:v mjpeg -f avi fb_footer.avi >/dev/null 2>&1",duration); //parse command line for ffmpeg
+	snprintf(ffmpeg_exec_path,sizeof(ffmpeg_exec_path),"nice -5 ffmpeg -loglevel panic -y -loop 1 -i \"%s\" -t %i -r 5  -force_key_frames 1 -c:v mjpeg -f avi \"%s.avi\" >/dev/null 2>&1",png_path,duration,png_path); //parse command line for ffmpeg
 	snprintf(omx_exec_path,sizeof(omx_exec_path),"omxplayer --no-osd --no-keys --layer 2000 --win 0,0,%i,%i \"%s.avi\" >/dev/null 2>&1",screen_width,bar_height,png_path); //parse command line for omx
-		
+	
+
+
 	while(true){
 		chdir(gpio_path); //change directory to gpio sysfs
 		temp_filehandle = fopen("value","r"); fgets(gpio_buffer,sizeof(gpio_buffer),temp_filehandle); fclose(temp_filehandle); //read gpio value
