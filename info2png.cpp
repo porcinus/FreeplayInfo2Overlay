@@ -87,11 +87,12 @@ FILE *temp_filehandle;						//file handle to get cpu temp/usage
 int i2c_handle;           				//i2c handle io
 char i2c_buffer[10] = {0};				//i2c data buffer
 int adc_value = 0;								//adc step value
+float vbat_tmp_value = 0.;				//temporary battery voltage
 float vbat_value = 0.;						//battery voltage
 gdImagePtr gd_image;							//gd image
 const int gd_char_w = 4; 					//gd image char width
 const int gd_string_padding = 15; //gd image padding width
-int gd_col_black,gd_col_white,gd_col_gray,gd_col_tmp, gd_col_text; 			//declarate gd color
+int gd_col_black,gd_col_white,gd_col_gray,gd_col_darkgray,gd_col_tmp,gd_col_text; //declarate gd color
 int gd_x_temp,gd_x_vbat,gd_x_cputemp,gd_x_cpuload,gd_x_wifi,gd_x_time; 	//declare gd x position
 char gd_vbat_chararray[14];				//battery voltage gd string
 char gd_cpu_chararray[9];					//cpu gd string
@@ -203,8 +204,9 @@ int main(int argc, char* argv[]){
 					if(read(i2c_handle,i2c_buffer,2)!=2){printf("Failed to read data from the i2c bus\n");battery_enabled=false;;											//start reading data from i2c device
 					}else{
 						adc_value=(i2c_buffer[0]<<8)|(i2c_buffer[1]&0xff);																																							//combine buffer bytes into integer
-						vbat_value=adc_value*(float)(adc_vref/adc_resolution)/(float)(divider_r2/(float)(divider_r1+divider_r2));												//compute battery voltage
-						if(vbat_value<1){printf("Warning, Probe voltage < 1 volt, settings problem?\n");}																								//security
+						vbat_tmp_value=adc_value*(float)(adc_vref/adc_resolution)/(float)(divider_r2/(float)(divider_r1+divider_r2));										//compute battery voltage
+						if(vbat_tmp_value<1){printf("Warning, voltage < 1 volt, Probing failed\n");}else{vbat_value=vbat_tmp_value;}										//security
+						
 						temp_filehandle = fopen("vbat.log","wb"); 																																											//open log file
 						fprintf(temp_filehandle,"%.2f",vbat_value);																																											//write log
 						fclose(temp_filehandle);																																																				//close log file
@@ -229,15 +231,16 @@ int main(int argc, char* argv[]){
 			gd_col_black = gdImageColorAllocate(gd_image, 0, 0, 0);																															//since it is the first color declared, it will be the background
 			gd_col_white = gdImageColorAllocate(gd_image, 255, 255, 255);																												//declarate white color
 			gd_col_gray = gdImageColorAllocate(gd_image, 128, 128, 128);																												//declarate gray color
+			gd_col_darkgray = gdImageColorAllocate(gd_image, 64, 64, 64);																												//declarate dark gray color
 			
 			if(battery_enabled){
-				gd_x_vbat=gd_string_padding/2;																																												//gd x position for battery voltage
+				gd_x_vbat=gd_char_w/2; /*gd_string_padding/2;*/																																					//gd x position for battery voltage
 				gd_x_cputemp=gd_x_vbat+gd_string_padding+(sizeof(gd_vbat_chararray)-1)*(gd_char_w+1);																	//gd x position for cpu temp
 			}else{gd_x_cputemp=gd_string_padding/2;}																																								//gd x position for cpu temp if not battery probe
 			
 			gd_x_cpuload=gd_x_cputemp+(sizeof(gd_cpu_chararray)-1)*(gd_char_w+1)+(gd_char_w+2);																			//gd x position for cpu load
 			gd_x_temp=gd_x_cpuload+(sizeof(gd_cpuload_chararray)-1)*(gd_char_w+1);																									//gd x position for cpu load
-			gd_x_time=gd_image_w-gd_string_padding/2-(sizeof(gd_time_chararray)-1)*(gd_char_w+1);																		//gd x position for time
+			gd_x_time=gd_image_w-gd_char_w/2/*gd_string_padding/2*/-(sizeof(gd_time_chararray)-1)*(gd_char_w+1);																		//gd x position for time
 		
 			if(wifi_enabled){
 				gd_x_wifi=gd_x_time-gd_string_padding-(sizeof(gd_wifi_chararray)-1)*(gd_char_w+1);																		//gd x position for wifi link speed
@@ -250,7 +253,7 @@ int main(int argc, char* argv[]){
 				gd_col_tmp=rgbcolorstep(vbat_value,vbatlow_value,4.2,(int)0x00ff0000,(int)0x0000ff00);																//compute int color
 				gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF);				//allocate gd color
 				gdImageString(gd_image,gdFontTiny,gd_x_vbat,1,(unsigned char*)gd_vbat_chararray,gd_col_text);													//print battery info to gd image
-				gdImageLine(gd_image,gd_x_cputemp-1-gd_string_padding/2,1,gd_x_cputemp-1-gd_string_padding/2,gd_image_h-2,gd_col_gray); //draw separator
+				gdImageLine(gd_image,gd_x_cputemp-1-gd_string_padding/2,1,gd_x_cputemp-1-gd_string_padding/2,gd_image_h-2,gd_col_darkgray); //draw separator
 			}
 		}
 		
@@ -283,24 +286,28 @@ int main(int argc, char* argv[]){
 			if(cpuload_value<100&&cpuload_value>=10){gdImageString(gd_image,gdFontTiny,gd_x_cpuload,1,(unsigned char*)"0",gd_col_gray);	//print cpu load gray 0 padding
 			}else if(cpuload_value<10){gdImageString(gd_image,gdFontTiny,gd_x_cpuload,1,(unsigned char*)"00",gd_col_gray);}					//print cpu load gray 00 padding
 			gdImageString(gd_image,gdFontTiny,gd_x_cpuload,1,(unsigned char*)gd_cpuload_chararray,gd_col_text); 										//print cpu load
-			gdImageLine(gd_image,gd_x_temp+1+gd_string_padding/2,1,gd_x_temp+1+gd_string_padding/2,gd_image_h-2,gd_col_gray); 				//draw separator
+			gdImageLine(gd_image,gd_x_temp+1+gd_string_padding/2,1,gd_x_temp+1+gd_string_padding/2,gd_image_h-2,gd_col_darkgray); 				//draw separator
 		}
 		
 		//wifi char array to render
 		if(png_enabled){ //png output enable
 			if(wifi_enabled){
-				gdImageLine(gd_image,gd_x_temp+1+gd_string_padding/2,gd_image_h/2,gd_x_wifi-1-gd_string_padding/2,gd_image_h/2,gd_col_gray); //filler
-				gdImageLine(gd_image,gd_x_wifi-1-gd_string_padding/2,1,gd_x_wifi-1-gd_string_padding/2,gd_image_h-2,gd_col_gray); 			//draw separator
+				gdImageLine(gd_image,gd_x_temp+1+gd_string_padding/2,(gd_image_h/2)-1,gd_x_wifi-1-gd_string_padding/2,(gd_image_h/2)-1,gd_col_darkgray); //filler
+				gdImageLine(gd_image,gd_x_wifi-1-gd_string_padding/2,1,gd_x_wifi-1-gd_string_padding/2,gd_image_h-2,gd_col_darkgray); 			//draw separator
 				snprintf(gd_wifi_chararray,sizeof(gd_wifi_chararray),"%iMBit/s",wifi_linkspeed); 																			//prepare char array to render
 				gdImageString(gd_image,gdFontTiny,gd_x_wifi,1,(unsigned char*)gd_wifi_chararray,gd_col_white); 												//print wifi link speed
 			}else{
-				gdImageLine(gd_image,gd_x_temp+1+gd_string_padding/2,gd_image_h/2,gd_x_time-1-gd_string_padding/2,gd_image_h/2,gd_col_gray); //filler
+				gdImageLine(gd_image,gd_x_temp+1+gd_string_padding/2,(gd_image_h/2)-1,gd_x_time-1-gd_string_padding/2,(gd_image_h/2)-1,gd_col_darkgray); //filler
 			}
 			
 			//time char array to render
-			gdImageLine(gd_image,gd_x_time-1-gd_string_padding/2,1,gd_x_time-1-gd_string_padding/2,gd_image_h-2,gd_col_gray); 				//draw separator
+			gdImageLine(gd_image,gd_x_time-1-gd_string_padding/2,1,gd_x_time-1-gd_string_padding/2,gd_image_h-2,gd_col_darkgray); 				//draw separator
 			snprintf(gd_time_chararray,sizeof(gd_time_chararray),"%02i:%02i",ltime->tm_hour,ltime->tm_min); 												//prepare char array to render
 			gdImageString(gd_image,gdFontTiny,gd_x_time,1,(unsigned char*)gd_time_chararray,gd_col_white); 													//print time
+		
+		
+		
+			gdImageLine(gd_image,0,gd_image_h-1,gd_image_w,gd_image_h-1,gd_col_gray); 				//bottom decoration
 		
 		
 			temp_filehandle = fopen("fb_footer.png","wb"); 																																					//open image file
