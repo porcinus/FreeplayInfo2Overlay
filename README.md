@@ -7,7 +7,7 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 - png2fb16 : Copy a png file to a 16 bits framebuffer, to use aside of info2png.
 
 - nns-overlay-deamon : Use to monitor a gpio input, then start a omxplayer instance to create a ingame 'osd', to use aside of info2png, ONLY work with gl or dispmanx driver. REQUIRE omxplayer and ffmpeg.
-
+Note: I am looking to avoid use of ffmpeg to speed thinks a little bit, current system convert a png file to a avi file using mjpeg codec, same result can be achieved by creating a riff header then repeating content of a jpeg file.
 
 # Provided scripts :
 - compile.sh : Compile all cpp files.
