@@ -20,6 +20,7 @@ FILE *temp_filehandle;								//file handle
 int gpio_pin = -1;										//gpio pin
 char gpio_path[PATH_MAX];							//gpio full path to sysfs
 bool gpio_activelow=false;						//gpio active low
+bool gpio_reverselogic=false;						//gpio reverselogic
 char gpio_buffer[4];									//gpio read buffer
 int gpio_interval=-1;									//gpio check interval
 int gpio_value;												//gpio value
@@ -38,6 +39,7 @@ void show_usage(void){
 	printf("Example : ./nns-overlay-deamon -pin 41 -interval 200 -file \"/dev/shm/fb_footer.png\" -duration 5 -screenwidth 1024 -height 40\n");
 	printf("Options:\n");
 	printf("\t-pin, pin number corresponding to input to monitor\n");
+	printf("\t-reverselogic, optional, reverse activelow logic\n");
 	printf("\t-interval, optional, pin checking interval in msec\n");
 	printf("\t-file, full path to png file, used for OSD\n");
 	printf("\t-duration, in sec, used for OSD\n");
@@ -55,6 +57,7 @@ int main(int argc, char *argv[]){
 	for(int i=1;i<argc;++i){ //argument to variable
 		if(strcmp(argv[i],"-help")==0){show_usage();return 1;
 		}else if(strcmp(argv[i],"-pin")==0){gpio_pin=atoi(argv[i+1]);snprintf(gpio_path,sizeof(gpio_path),"/sys/class/gpio/gpio%i/",gpio_pin);
+		}else if(strcmp(argv[i],"-reverselogic")==0){gpio_reverselogic=true;
 		}else if(strcmp(argv[i],"-interval")==0){gpio_interval=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-file")==0){png_path=(char*)argv[i+1];
 		}else if(strcmp(argv[i],"-duration")==0){duration=atoi(argv[i+1]);
@@ -64,6 +67,8 @@ int main(int argc, char *argv[]){
 	
 	if(gpio_pin<0||screen_width<0||bar_height<0||duration<0){printf("Failed, missing some arguments\n");show_usage();return 1;} //user miss some needed arguments
 	if(gpio_interval<100||gpio_interval>600){printf("Warning, wrong cheking interval set, setting it to 200msec\n");gpio_interval=200;} //wrong interval
+	
+	if(gpio_reverselogic){printf("Reversed activelow logic\n");}
 	
 	
 	while(!png_exist){
@@ -121,7 +126,7 @@ chdir(gpio_path); //change directory to gpio sysfs
 		chdir(gpio_path); //change directory to gpio sysfs
 		temp_filehandle = fopen("value","r"); fgets(gpio_buffer,sizeof(gpio_buffer),temp_filehandle); fclose(temp_filehandle); //read gpio value
 		gpio_value=atoi(gpio_buffer); //parse gpio value
-		if((gpio_value==0&&!gpio_activelow)||(gpio_value==1&&gpio_activelow)){ //gpio button pressed
+		if((gpio_value==0&&(!gpio_activelow&&!gpio_reverselogic||gpio_activelow&&gpio_reverselogic))||(gpio_value==1&&(gpio_activelow&&!gpio_reverselogic||!gpio_activelow&&gpio_reverselogic))){ //gpio button pressed
 			//chdir(program_path); //change directory
 			system(ffmpeg_exec_path); //convert png to avi
 			system(omx_exec_path); //run omxplayer
