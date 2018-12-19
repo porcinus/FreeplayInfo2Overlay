@@ -10,7 +10,7 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 Note: I am looking to avoid use of ffmpeg to speed thinks a little bit, current system convert a png file to a avi file using mjpeg codec, same result can be achieved by creating a riff header then repeating content of a jpeg file.
 
 # Provided scripts :
-- compile.sh : Compile all cpp files.
+- compile.sh : Compile all cpp files. Require libgd-dev, libpng-dev, zlib1g-dev, libfreetype6-dev.
 - example-framebuffer.sh : Run info2png and png2fb16 (Battery monitoring enabled).
 - example-overlay.sh : Run info2png and nns-overlay-deamon (Battery monitoring enabled).
 - example-nobattery-framebuffer.sh : Run info2png and png2fb16 (No battery).
