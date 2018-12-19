@@ -42,4 +42,5 @@ If you are interrested by plotting battery to a png file, vbat-plot.sh is provid
 # Scripts don't work
 Don't miss to chmod all .sh files in the folder : chmod 0755 **/*.sh
 
-
+# Overlay is displayed when gpio pin 'not pressed'
+Add argument ' -reverselogic' to nns-overlay-deamon run script line
