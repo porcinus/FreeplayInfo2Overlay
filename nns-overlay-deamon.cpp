@@ -118,7 +118,7 @@ chdir(gpio_path); //change directory to gpio sysfs
 	//snprintf(omx_exec_path,sizeof(omx_exec_path),"omxplayer --no-osd --no-keys --alpha 150 --layer 20000 --win 0,0,%i,%i --align center --font-size 750 --no-ghost-box --subtitles \"%s\" \"%s/black.avi\" >/dev/null 2>&1",screen_width,bar_height,png_path,program_path); //parse command line for omx
 	
 	snprintf(ffmpeg_exec_path,sizeof(ffmpeg_exec_path),"nice -5 ffmpeg -loglevel panic -y -loop 1 -i \"%s\" -t %i -r 5  -force_key_frames 1 -c:v mjpeg -f avi \"%s.avi\" >/dev/null 2>&1",png_path,duration,png_path); //parse command line for ffmpeg
-	snprintf(omx_exec_path,sizeof(omx_exec_path),"omxplayer --no-osd --no-keys --layer 20000 --win 0,0,%i,%i \"%s.avi\" >/dev/null 2>&1",screen_width,bar_height,png_path); //parse command line for omx
+	snprintf(omx_exec_path,sizeof(omx_exec_path),"omxplayer -z --no-osd --no-keys --layer 20000 --win 0,0,%i,%i \"%s.avi\" >/dev/null 2>&1",screen_width,bar_height,png_path); //parse command line for omx
 	
 
 
