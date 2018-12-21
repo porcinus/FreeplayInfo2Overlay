@@ -12,7 +12,7 @@ Use to create a 'OSD' on program running on gl or dispmanx driver
 #include <unistd.h>
 #include <cstring>
 #include <limits.h>
-
+#include <time.h>
 
 
 
@@ -20,7 +20,7 @@ FILE *temp_filehandle;								//file handle
 int gpio_pin = -1;										//gpio pin
 char gpio_path[PATH_MAX];							//gpio full path to sysfs
 bool gpio_activelow=false;						//gpio active low
-bool gpio_reverselogic=false;						//gpio reverselogic
+bool gpio_reverselogic=false;					//gpio reverselogic
 char gpio_buffer[4];									//gpio read buffer
 int gpio_interval=-1;									//gpio check interval
 int gpio_value;												//gpio value
@@ -28,11 +28,20 @@ char *png_path;												//full path to str file
 bool png_exist=false;									//file exist?
 char program_path[PATH_MAX];					//full path to this program
 int screen_width=-1;									//screen width
-int bar_height=0;									  //bar height
-int duration = -1;							//video duration
+int bar_height=0;									  	//bar height
+int duration = -1;										//video duration
 //char omx_exec_path[PATH_MAX];					//full command line to run omx
 //char ffmpeg_exec_path[PATH_MAX];	//full command line to run ffmpeg
-char img2dispmanx_exec_path[PATH_MAX];	//full command line to run img2dispmanx
+char img2dispmanx_exec_path[PATH_MAX];								//full command line to run img2dispmanx
+
+
+char icon_overheat_max_exec_path[PATH_MAX];		//full command line to run img2dispmanx cpu-overheat-max
+char icon_overheat_warn_exec_path[PATH_MAX];	//full command line to run img2dispmanx cpu-overheat-warning
+unsigned int icon_overheat_max_start = 0;			//time of last cpu-overheat-max run
+unsigned int icon_overheat_warn_start = 0;		//time of last cpu-overheat-warning run
+unsigned int tmp_time = 0;										//little opt
+int rpi_cpu_temp = 0;													//rpi cpu temperature
+
 
 
 
@@ -127,6 +136,12 @@ chdir(gpio_path); //change directory to gpio sysfs
 	
 	snprintf(img2dispmanx_exec_path,sizeof(img2dispmanx_exec_path),"timeout %i %s/img2dispmanx -file \"%s\" -width %i -height %i -layer 20000  >/dev/null 2>&1",duration,program_path,png_path,screen_width,bar_height); //parse command line for img2dispmanx
 
+	snprintf(icon_overheat_max_exec_path,sizeof(icon_overheat_max_exec_path),"%s/img2dispmanx -file \"%s/img/cpu-overheat-max.png\" -x 10 -y 60 -width 64 -layer 20002 -timeout 5 >/dev/null 2>&1 &",program_path,program_path); //parse command line for img2dispmanx
+	snprintf(icon_overheat_warn_exec_path,sizeof(icon_overheat_warn_exec_path),"%s/img2dispmanx -file \"%s/img/cpu-overheat-warning.png\" -x 10 -y 60 -width 64 -layer 20001 -timeout 5 >/dev/null 2>&1 &",program_path,program_path); //parse command line for img2dispmanx
+
+
+
+
 	while(true){
 		chdir(gpio_path); //change directory to gpio sysfs
 		temp_filehandle = fopen("value","r"); fgets(gpio_buffer,sizeof(gpio_buffer),temp_filehandle); fclose(temp_filehandle); //read gpio value
@@ -136,8 +151,33 @@ chdir(gpio_path); //change directory to gpio sysfs
 			//system(ffmpeg_exec_path); //convert png to avi
 			//system(omx_exec_path); //run omxplayer
 			//printf("program path:%s\n",img2dispmanx_exec_path);
-			system(img2dispmanx_exec_path); //run omxplayer
+			//printf("%u\n", (unsigned)time(NULL));
+			system(img2dispmanx_exec_path); //display overlay, blocking
+			//printf("%u\n", (unsigned)time(NULL));
 		}
+		
+		//read rpi temp value
+		//temp_filehandle = fopen("/home/temp","r");
+		temp_filehandle = fopen("/sys/class/thermal/thermal_zone0/temp","r");
+		fscanf(temp_filehandle, "%i", &rpi_cpu_temp);
+		fclose(temp_filehandle); 
+		
+		
+		tmp_time=time(NULL);
+		if((tmp_time - icon_overheat_warn_start)>5 && rpi_cpu_temp>=80000 && rpi_cpu_temp<85000){ //low overheat
+			icon_overheat_warn_start=tmp_time;
+			chdir(program_path); //change directory
+			system(icon_overheat_warn_exec_path); //display overheat overlay, non blocking
+			//printf("%u\n", (unsigned)time(NULL));
+		}
+		
+		if((tmp_time - icon_overheat_max_start)>5 && rpi_cpu_temp>=85000){ //hot overheat
+			icon_overheat_max_start=tmp_time;
+			chdir(program_path); //change directory
+			system(icon_overheat_max_exec_path); //display overheat overlay, non blocking
+			//printf("%u\n", (unsigned)time(NULL));
+		}
+		
 		usleep(gpio_interval*1000); //sleep
 	}
 	
