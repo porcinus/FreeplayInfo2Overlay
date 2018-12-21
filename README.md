@@ -11,7 +11,7 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 - img2dispmanx : This file heavily based on https://github.com/hex007/eop , use to display png or jpeg picture to dispmanx.
 
 # Provided scripts :
-- compile.sh : Compile all cpp files. Require libgd-dev, libpng-dev, zlib1g-dev, libfreetype6-dev, libpng-dev, libjpeg-dev.
+- compile.sh : Compile all cpp files. Require libgd-dev, zlib1g-dev, libfreetype6-dev, libpng-dev, libjpeg-dev.
 - example-framebuffer.sh : Run info2png and png2fb16 (Battery monitoring enabled).
 - example-overlay.sh : Run info2png and nns-overlay-deamon (Battery monitoring enabled).
 - example-nobattery-framebuffer.sh : Run info2png and png2fb16 (No battery).
