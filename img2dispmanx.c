@@ -222,15 +222,12 @@ void show_usage(void){
 	fprintf(stderr,"\t-height, picture size on screen, optional if -width is set (will keep aspect ratio)\n");
 	fprintf(stderr,"\t-layer, optional, dispmanx layer to use, 1 if not set\n");
 	fprintf(stderr,"\t-display, optional, dispmanx display to use\n");
+	fprintf(stderr,"\t-timeout, optional, in sec\n");
 	exit(EXIT_FAILURE);
 }
 
 
-bool loadImage(char* f_name, Image *img){
-	if(endsWith(f_name, ".png")){return loadPNG(f_name, img);
-	}else if(endsWith(f_name, ".jpg") || endsWith(f_name, ".jpeg")){return loadJPG(f_name, img);}
-	return false;
-}
+
 
 int endsWith(const char *str, const char *suffix){
 	if(!str||!suffix){return 0;}
@@ -241,6 +238,14 @@ int endsWith(const char *str, const char *suffix){
 }
 
 
+bool loadImage(char* f_name, Image *img){
+	if(endsWith(f_name, ".png")){return loadPNG(f_name, img);
+	}else if(endsWith(f_name, ".jpg") || endsWith(f_name, ".jpeg")){return loadJPG(f_name, img);}
+	return false;
+}
+
+
+
 int main(int argc, char *argv[]){
 	int32_t layer = 1;
 	uint32_t displayNumber = 0;
@@ -248,6 +253,7 @@ int main(int argc, char *argv[]){
 	int yOffset = 0;
 	int width = 0;
 	int height = 0;
+	int timeout = 0;
 	char *f_name = NULL;
 	int result = 0;
 	//---------------------------------------------------------------------
@@ -260,6 +266,7 @@ int main(int argc, char *argv[]){
 			}else if(strcmp(argv[i],"-width")==0){width=atoi(argv[i+1]);
 			}else if(strcmp(argv[i],"-height")==0){height=atoi(argv[i+1]);
 			}else if(strcmp(argv[i],"-layer")==0){layer=atoi(argv[i+1]);
+			}else if(strcmp(argv[i],"-timeout")==0){timeout=atoi(argv[i+1]);
 			}else if(strcmp(argv[i],"-display")==0){displayNumber=atoi(argv[i+1]);}
 	}
 
@@ -345,8 +352,13 @@ int main(int argc, char *argv[]){
 	assert(result == 0);
 	//---------------------------------------------------------------------
 
-	// Wait till a signal is received
-	pause();
+	
+	if(timeout>0){
+		sleep(timeout); // just sleep
+	}else{
+		pause(); // Wait till a signal is received
+	}
+	
 	//---------------------------------------------------------------------
 
 	// Delete layer and free memory
