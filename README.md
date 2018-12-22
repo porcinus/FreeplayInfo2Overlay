@@ -65,3 +65,6 @@ Don't miss to chmod all .sh files in the folder : chmod 0755 **/*.sh
 
 # Overlay is displayed when gpio pin 'not pressed'
 Add argument ' -reverselogic' to nns-overlay-deamon run script line
+
+# Known issues
+- For some reason, system can fail to keep sh script open resulting on 'sh: 0: Pipe call failed' in var/log/syslog witch is really rare, occur only once in a month in my case.
