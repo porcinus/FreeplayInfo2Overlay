@@ -1,6 +1,7 @@
 /*******************************************
 * This file heavily based on https://github.com/hex007/eop
 * Most modifications are done on program arguments level and formating
+* img2dispmanx v0.1a
 *******************************************/
 
 #include <assert.h>
