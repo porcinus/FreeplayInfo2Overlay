@@ -1,6 +1,6 @@
 /*
 NNS @ 2018
-info2png v0.1b
+info2png v0.1c
 It create a PNG/log file contening CPU load and temperature, Wifi link speed and time, Battery voltage is optional.
 */
 
