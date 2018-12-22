@@ -12,19 +12,19 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 
 # History
 
-info2png
+info2png:
 - 0.1a : Initial release.
 - 0.1b : Add a logging system for plot, implement srt subtitle file generation for omxplayer.
 - 0.1c : Removed srt subtitle implement, Various bugfix.
 
-png2fb16
+png2fb16:
 - 0.1a : Initial release.
 - 0.1b : Bugfix.
 
-img2dispmanx
+img2dispmanx:
 - 0.1a : Initial release.
 
-nns-overlay-deamon
+nns-overlay-deamon:
 - 0.1a : Initial release.
 - 0.1b : Implement ffmpeg and omxplayer to display overlay.
 - 0.1c : Implement img2dispmanx to avoid use of ffmpeg and omxplayer, added overheat icon.
