@@ -10,6 +10,22 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 
 - img2dispmanx : This file heavily based on https://github.com/hex007/eop , use to display png or jpeg picture to dispmanx.
 
+# History
+
+info2png
+- 0.1a : Initial release.
+- 0.1b : Add a logging system for plot, implement srt subtitle file generation for omxplayer.
+- 0.1c : Removed srt subtitle implement, Various bugfix.
+
+png2fb16
+- 0.1a : Initial release.
+- 0.1b : Bugfix.
+
+nns-overlay-deamon
+- 0.1a : Initial release.
+- 0.1b : Implement ffmpeg and omxplayer to display overlay.
+- 0.1c : Implement img2dispmanx to avoid use of ffmpeg and omxplayer, added overheat icon.
+
 # Provided scripts :
 - compile.sh : Compile all cpp files. Require libgd-dev, zlib1g-dev, libfreetype6-dev, libpng-dev, libjpeg-dev.
 - example-framebuffer.sh : Run info2png and png2fb16 (Battery monitoring enabled).
