@@ -1,6 +1,6 @@
 /*
 NNS @ 2018
-nns-overlay-deamon v0.1c
+nns-overlay-deamon v0.1d
 Use to create a 'OSD' on program running on gl or dispmanx driver
 */
 
