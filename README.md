@@ -28,6 +28,7 @@ nns-overlay-deamon:
 - 0.1a : Initial release.
 - 0.1b : Implement ffmpeg and omxplayer to display overlay.
 - 0.1c : Implement img2dispmanx to avoid use of ffmpeg and omxplayer, added overheat icon.
+- 0.1d : Added low battery icon (gpio input if set)
 
 
 # Provided scripts :
