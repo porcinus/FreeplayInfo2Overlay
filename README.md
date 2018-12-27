@@ -6,7 +6,7 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 
 - png2fb16 : Copy a png file to a 16 bits framebuffer, to use aside of info2png.
 
-- nns-overlay-deamon : Use to monitor a gpio input, then start a omxplayer instance to create a ingame 'osd', to use aside of info2png, ONLY work with gl or dispmanx driver.
+- nns-overlay-deamon : Use to monitor a gpio button input to display osd, can monitor a gpio pin to alert user of a low battery state, to be used aside of info2png, ONLY work with dispmanx driver.
 
 - img2dispmanx : This file heavily based on https://github.com/hex007/eop , use to display png or jpeg picture to dispmanx.
 
@@ -28,7 +28,7 @@ nns-overlay-deamon:
 - 0.1a : Initial release.
 - 0.1b : Implement ffmpeg and omxplayer to display overlay.
 - 0.1c : Implement img2dispmanx to avoid use of ffmpeg and omxplayer, added overheat icon.
-- 0.1d : Added low battery icon (gpio input if set)
+- 0.1d : Added low battery icon (gpio input if set using -lowbatpin, plus use -lowbatreverselogic if reversed logic).
 
 
 # Provided scripts :
