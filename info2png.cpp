@@ -1,8 +1,9 @@
 /*
 NNS @ 2018
-info2png v0.1c
+info2png
 It create a PNG/log file contening CPU load and temperature, Wifi link speed and time, Battery voltage is optional.
 */
+const char programversion[]="0.1c";
 
  /* Bring in gd library functions */
 #include "gd.h"
@@ -119,6 +120,7 @@ tm *ltime; 												//localtime object
 void show_usage(void){
 	printf("Example with battery: ./info2png -i2cbus \"/dev/i2c-1\" -i2caddress 0x4d -adcvref 3.65 -adcres 4096 -r1value 91 -r2value 220 -vbatlow 3.5 -vbatlogging -width 304 -height 10 -o \"/dev/shm\"\n");
 	printf("Example without battery: ./info2png -width 304 -height 10 -o \"/dev/shm\"\n");
+	printf("Version: %s\n",programversion);
 	printf("Options:\n");
 	printf("\t-i2cbus, path to i2c bus device [Optional, used for battery voltage]\n");
 	printf("\t-i2caddress, i2c device adress, found via 'i2cdetect' [Optional, used for battery voltage]\n");

@@ -1,8 +1,9 @@
 /*
 NNS @ 2018
-png2fb16 v0.1b
+png2fb16
 Draw PNG file to 16bits framebuffer.
 */
+const char programversion[]="0.1b";
 
 #include "gd.h"
 #include <stdio.h>
@@ -47,6 +48,7 @@ int main(int argc, char* argv[]){
 	
 	if(argc<9){ //wrong arguments count
 		printf("Usage : ./png2fb16 -i \"png file\" -f \"framebuffer\" -xoffset 100 -yoffset 50\n");
+		printf("Version: %s\n",programversion);
 		printf("Options:\n");
 		printf("\t-i, PNG file to display on framebuffer, alpha channel is ignored\n");
 		printf("\t-interval, optional, drawing interval in sec\n");

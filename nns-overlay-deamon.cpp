@@ -1,8 +1,9 @@
 /*
 NNS @ 2018
-nns-overlay-deamon v0.1e
+nns-overlay-deamon
 Use to create a 'OSD' on program running on gl or dispmanx driver
 */
+const char programversion[]="0.1e";
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -54,6 +55,7 @@ unsigned int icon_lowbat_start = 0;						//time of last lowbat run
 
 void show_usage(void){
 	printf("Example : ./nns-overlay-deamon -pin 41 -reverselogic -interval 200 -file \"/dev/shm/fb_footer.png\" -duration 5\n");
+	printf("Version: %s\n",programversion);
 	printf("Options:\n");
 	printf("\t-pin, gpio pin use to display OSD\n");
 	printf("\t-reverselogic, optional, reverse activelow logic\n");

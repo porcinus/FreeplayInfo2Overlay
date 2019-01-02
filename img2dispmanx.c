@@ -1,8 +1,9 @@
 /*******************************************
 * This file heavily based on https://github.com/hex007/eop
 * Most modifications are done on program arguments level and formating
-* img2dispmanx v0.1b
+* img2dispmanx
 *******************************************/
+const char programversion[]="0.1b";
 
 #include <assert.h>
 #include <ctype.h>
@@ -216,6 +217,7 @@ bool loadPNG(const char *f_name, Image *image){
 void show_usage(void){
 	fprintf(stderr,"Example : ./img2dispmanx -file image.png -x 10 -y 30 -width 100 -height 200 -layer 1000 -display 1\n");
 	fprintf(stderr,"Example : ./img2dispmanx -file image.png -x 10 -y 30 -width FILL -height 200 -layer 1000 -display 1\n");
+	fprintf(stderr,"Version: %s\n",programversion);
 	fprintf(stderr,"Options:\n");
 	fprintf(stderr,"\t-file, png or jpeg file to display\n");
 	fprintf(stderr,"\t-x, optional, position where picture will be display, 0 if not set or width set to 'FILL'\n");
@@ -274,8 +276,8 @@ int main(int argc, char *argv[]){
 			}else if(strcmp(argv[i],"-display")==0){displayNumber=atoi(argv[i+1]);}
 	}
 
-	if(f_name==NULL){fprintf(stderr, "Error, need to set file to display\n");return 1;}
-	if(width==0&&height==0&&!widthfill&&!heightfill){fprintf(stderr, "Error, need to set at least width or height\n");return 1;}
+	if(f_name==NULL){fprintf(stderr, "Error, need to set file to display\n");show_usage();return 1;}
+	if(width==0&&height==0&&!widthfill&&!heightfill){fprintf(stderr, "Error, need to set at least width or height\n");show_usage();return 1;}
 
 
 	
