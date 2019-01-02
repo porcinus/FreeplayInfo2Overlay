@@ -1,7 +1,7 @@
 /*******************************************
 * This file heavily based on https://github.com/hex007/eop
 * Most modifications are done on program arguments level and formating
-* img2dispmanx v0.1a
+* img2dispmanx v0.1b
 *******************************************/
 
 #include <assert.h>
@@ -215,12 +215,13 @@ bool loadPNG(const char *f_name, Image *image){
 
 void show_usage(void){
 	fprintf(stderr,"Example : ./img2dispmanx -file image.png -x 10 -y 30 -width 100 -height 200 -layer 1000 -display 1\n");
+	fprintf(stderr,"Example : ./img2dispmanx -file image.png -x 10 -y 30 -width FILL -height 200 -layer 1000 -display 1\n");
 	fprintf(stderr,"Options:\n");
 	fprintf(stderr,"\t-file, png or jpeg file to display\n");
-	fprintf(stderr,"\t-x, optional, position where picture will be display, 0 if not set\n");
-	fprintf(stderr,"\t-y, optional, position where picture will be display, 0 if not set\n");
-	fprintf(stderr,"\t-width, picture size on screen, optional if -height is set (will keep aspect ratio)\n");
-	fprintf(stderr,"\t-height, picture size on screen, optional if -width is set (will keep aspect ratio)\n");
+	fprintf(stderr,"\t-x, optional, position where picture will be display, 0 if not set or width set to 'FILL'\n");
+	fprintf(stderr,"\t-y, optional, position where picture will be display, 0 if not set or height set to 'FILL'\n");
+	fprintf(stderr,"\t-width, picture size on screen, optional if -height is set (will keep aspect ratio), fill screen width if set to 'FILL'\n");
+	fprintf(stderr,"\t-height, picture size on screen, optional if -width is set (will keep aspect ratio), fill screen height if set to 'FILL'\n");
 	fprintf(stderr,"\t-layer, optional, dispmanx layer to use, 1 if not set\n");
 	fprintf(stderr,"\t-display, optional, dispmanx display to use\n");
 	fprintf(stderr,"\t-timeout, optional, in sec\n");
@@ -252,6 +253,8 @@ int main(int argc, char *argv[]){
 	uint32_t displayNumber = 0;
 	int xOffset = 0;
 	int yOffset = 0;
+	bool widthfill = false;
+	bool heightfill = false;
 	int width = 0;
 	int height = 0;
 	int timeout = 0;
@@ -264,15 +267,15 @@ int main(int argc, char *argv[]){
 			}else if(strcmp(argv[i],"-file")==0){f_name=argv[i+1];
 			}else if(strcmp(argv[i],"-x")==0){xOffset=atoi(argv[i+1]);
 			}else if(strcmp(argv[i],"-y")==0){yOffset=atoi(argv[i+1]);
-			}else if(strcmp(argv[i],"-width")==0){width=atoi(argv[i+1]);
-			}else if(strcmp(argv[i],"-height")==0){height=atoi(argv[i+1]);
+			}else if(strcmp(argv[i],"-width")==0){if(strcmp(argv[i+1],"FILL")==0){widthfill=true;}else{width=atoi(argv[i+1]);}
+			}else if(strcmp(argv[i],"-height")==0){if(strcmp(argv[i+1],"FILL")==0){heightfill=true;}else{height=atoi(argv[i+1]);}
 			}else if(strcmp(argv[i],"-layer")==0){layer=atoi(argv[i+1]);
 			}else if(strcmp(argv[i],"-timeout")==0){timeout=atoi(argv[i+1]);
 			}else if(strcmp(argv[i],"-display")==0){displayNumber=atoi(argv[i+1]);}
 	}
 
 	if(f_name==NULL){fprintf(stderr, "Error, need to set file to display\n");return 1;}
-	if(width==0&&height==0){fprintf(stderr, "Error, need to set at least width or height\n");return 1;}
+	if(width==0&&height==0&&!widthfill&&!heightfill){fprintf(stderr, "Error, need to set at least width or height\n");return 1;}
 
 
 	
@@ -307,6 +310,16 @@ int main(int argc, char *argv[]){
 	result = vc_dispmanx_display_get_info(display, &info);
 	assert(result == 0);
 
+	if(widthfill){
+		xOffset=0;
+		width=info.width;
+	}
+	
+	if(heightfill){
+		yOffset=0;
+		height=info.height;
+	}
+	
 	// Calculate linear scaling maintaining aspect ratio
 	if (width == 0 && height != 0) {
 		width = (height * image.width) / image.height;

@@ -1,6 +1,6 @@
 /*
 NNS @ 2018
-nns-overlay-deamon v0.1d
+nns-overlay-deamon v0.1e
 Use to create a 'OSD' on program running on gl or dispmanx driver
 */
 
@@ -34,11 +34,9 @@ bool gpio_lowbatexported=false;				//gpio low battery is exported?
 char *png_path;												//full path to str file
 bool png_exist=false;									//file exist?
 char program_path[PATH_MAX];					//full path to this program
-int screen_width=-1;									//screen width
-int bar_height=0;									  	//bar height
+//int screen_width=-1;									//screen width
+//int bar_height=0;									  	//bar height
 int duration = -1;										//video duration
-//char omx_exec_path[PATH_MAX];					//full command line to run omx
-//char ffmpeg_exec_path[PATH_MAX];	//full command line to run ffmpeg
 char img2dispmanx_exec_path[PATH_MAX];								//full command line to run img2dispmanx
 
 
@@ -55,23 +53,21 @@ unsigned int icon_lowbat_start = 0;						//time of last lowbat run
 
 
 void show_usage(void){
-	printf("Example : ./nns-overlay-deamon -pin 41 -reverselogic -interval 200 -file \"/dev/shm/fb_footer.png\" -duration 5 -screenwidth 1024 -height 40\n");
+	printf("Example : ./nns-overlay-deamon -pin 41 -reverselogic -interval 200 -file \"/dev/shm/fb_footer.png\" -duration 5\n");
 	printf("Options:\n");
 	printf("\t-pin, gpio pin use to display OSD\n");
 	printf("\t-reverselogic, optional, reverse activelow logic\n");
 	printf("\t-interval, optional, pin checking interval in msec\n");
 	printf("\t-file, full path to png file, used for OSD\n");
 	printf("\t-duration, in sec, used for OSD\n");
-	printf("\t-screenwidth, screen width, used for OSD\n");
-	printf("\t-height, bar height, optional, used for OSD\n");
+	//printf("\t-screenwidth, screen width, optional, used for OSD\n");
+	//printf("\t-height, bar height, optional, used for OSD\n");
 	printf("\t-lowbatpin, optional, gpio pin used to signal low battery, disable if not set\n");
 	printf("\t-lowbatreverselogic, optional, reverse activelow logic for lowbatpin\n");
 }
 
 int main(int argc, char *argv[]){
 	if(argc<9){show_usage();return 1;} //wrong arguments count
-	//if(access("/usr/bin/omxplayer",F_OK)!=0){printf("Failed, require OMXplayer\n");return 1;} //'omxplayer' is not installed
-	//if(access("/usr/bin/ffmpeg",F_OK)!=0){printf("Failed, require ffmpeg\n");return 1;} //'ffmpeg' is not installed
 	
 	sleep(2);
 	
@@ -83,12 +79,12 @@ int main(int argc, char *argv[]){
 		}else if(strcmp(argv[i],"-lowbatreverselogic")==0){gpio_lowbatreverselogic=true;
 		}else if(strcmp(argv[i],"-interval")==0){gpio_interval=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-file")==0){png_path=(char*)argv[i+1];
-		}else if(strcmp(argv[i],"-duration")==0){duration=atoi(argv[i+1]);
-		}else if(strcmp(argv[i],"-screenwidth")==0){screen_width=atoi(argv[i+1]);
-		}else if(strcmp(argv[i],"-height")==0){bar_height=atoi(argv[i+1]);}
+		}else if(strcmp(argv[i],"-duration")==0){duration=atoi(argv[i+1]);}
+		//}else if(strcmp(argv[i],"-screenwidth")==0){screen_width=atoi(argv[i+1]);
+		//}else if(strcmp(argv[i],"-height")==0){bar_height=atoi(argv[i+1]);}
 	}
 	
-	if(gpio_pin<0||screen_width<0||duration<0){printf("Failed, missing some arguments\n");show_usage();return 1;} //user miss some needed arguments
+	if(gpio_pin<0||/*screen_width<0||*/duration<0){printf("Failed, missing some arguments\n");show_usage();return 1;} //user miss some needed arguments
 	if(gpio_interval<100||gpio_interval>600){printf("Warning, wrong cheking interval set, setting it to 200msec\n");gpio_interval=200;} //wrong interval
 	if(gpio_reverselogic){printf("Reversed activelow logic\n");}
 	
@@ -178,7 +174,7 @@ int main(int argc, char *argv[]){
 	
 	
 	
-	snprintf(img2dispmanx_exec_path,sizeof(img2dispmanx_exec_path),"timeout %i %s/img2dispmanx -file \"%s\" -width %i -height %i -layer 20000  >/dev/null 2>&1",duration,program_path,png_path,screen_width,bar_height); //parse command line for img2dispmanx
+	snprintf(img2dispmanx_exec_path,sizeof(img2dispmanx_exec_path),"timeout %i %s/img2dispmanx -file \"%s\" -width FILL -layer 20000  >/dev/null 2>&1",duration,program_path,png_path/*,screen_width,bar_height*/); //parse command line for img2dispmanx
 
 	snprintf(icon_overheat_max_exec_path,sizeof(icon_overheat_max_exec_path),"%s/img2dispmanx -file \"%s/img/cpu-overheat-max.png\" -x 10 -y 60 -width 64 -layer 20002 -timeout 5 >/dev/null 2>&1 &",program_path,program_path); //parse command line for img2dispmanx
 	snprintf(icon_overheat_warn_exec_path,sizeof(icon_overheat_warn_exec_path),"%s/img2dispmanx -file \"%s/img/cpu-overheat-warning.png\" -x 10 -y 60 -width 64 -layer 20001 -timeout 5 >/dev/null 2>&1 &",program_path,program_path); //parse command line for img2dispmanx
