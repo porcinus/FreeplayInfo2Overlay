@@ -23,13 +23,14 @@ png2fb16:
 
 img2dispmanx:
 - 0.1a : Initial release.
+- 0.1b : width, height can be set to FILL to fill screen size.
 
 nns-overlay-deamon:
 - 0.1a : Initial release.
 - 0.1b : Implement ffmpeg and omxplayer to display overlay.
 - 0.1c : Implement img2dispmanx to avoid use of ffmpeg and omxplayer, added overheat icon.
 - 0.1d : Added low battery icon (gpio input if set using -lowbatpin, plus use -lowbatreverselogic if reversed logic).
-
+- 0.1e : Adapt program to updated img2dispmanx, No more set width and height.
 
 # Provided scripts :
 - compile.sh : Compile all cpp files. Require libgd-dev, zlib1g-dev, libfreetype6-dev, libpng-dev, libjpeg-dev.
