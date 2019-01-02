@@ -374,5 +374,7 @@ int main(int argc, char *argv[]){
 	result = vc_dispmanx_display_close(display);
 	assert(result == 0);
 
+	bcm_host_deinit();
+
 	return 0;
 }
