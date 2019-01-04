@@ -16,6 +16,7 @@ info2png:
 - 0.1a : Initial release.
 - 0.1b : Add a logging system for plot, implement srt subtitle file generation for omxplayer.
 - 0.1c : Removed srt subtitle implement, Various bugfix.
+- 0.1d : Code cleanup, can show ip address instead of link speed using -ip, background no more flat.
 
 png2fb16:
 - 0.1a : Initial release.
