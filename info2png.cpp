@@ -93,7 +93,7 @@ float vbat_value = 0.;						//battery voltage
 gdImagePtr gd_image;							//gd image
 const int gd_char_w = 4; 					//gd image char width
 const int gd_string_padding = 15; //gd image padding width
-int gd_col_black,gd_col_white,gd_col_gray,gd_col_darkgray,gd_col_green,gd_col_tmp,gd_col_text; //declarate gd color
+int gd_col_black,gd_col_white,gd_col_gray,gd_col_darkgray,gd_col_darkergray,gd_col_green,gd_col_tmp,gd_col_text; //declarate gd color
 int gd_x_temp,gd_x_vbat,gd_x_cputemp,gd_x_cpuload,gd_x_wifi,gd_x_time; 	//declare gd x position
 char gd_vbat_chararray[14];				//battery voltage gd string
 char gd_cpu_chararray[9];					//cpu gd string
@@ -215,6 +215,7 @@ int main(int argc, char* argv[]){
 			}
 		}
 		
+		
 		//-----------------------------Start of GD part
 		if(png_enabled){ //png output enable
 			//Check if WIFI is working
@@ -235,7 +236,11 @@ int main(int argc, char* argv[]){
 			gd_col_white = gdImageColorAllocate(gd_image, 255, 255, 255);																												//declarate white color
 			gd_col_gray = gdImageColorAllocate(gd_image, 128, 128, 128);																												//declarate gray color
 			gd_col_darkgray = gdImageColorAllocate(gd_image, 64, 64, 64);																												//declarate dark gray color
+			gd_col_darkergray = gdImageColorAllocate(gd_image, 40, 40, 40);																											//declarate darker gray color
 			gd_col_green = gdImageColorAllocate(gd_image, 0, 255, 0);																														//declarate green color
+			
+			
+			for(int i=-gd_image_h;i<gd_image_w;i+=6){gdImageLine(gd_image,i,0,i+gd_image_h,gd_image_h,gd_col_darkergray);}				//background decoration
 			
 			if(battery_enabled){
 				gd_x_vbat=gd_char_w/2; /*gd_string_padding/2;*/																																				//gd x position for battery voltage
