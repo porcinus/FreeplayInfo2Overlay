@@ -22,7 +22,7 @@ const char programversion[]="0.1c";
 #include <locale.h>
 #include <limits.h>
 
-/*
+/*//benchmark
    #include <sys/time.h>
     typedef unsigned long long timestamp_t;
 
@@ -93,7 +93,7 @@ float vbat_value = 0.;						//battery voltage
 gdImagePtr gd_image;							//gd image
 const int gd_char_w = 4; 					//gd image char width
 const int gd_string_padding = 15; //gd image padding width
-int gd_col_black,gd_col_white,gd_col_gray,gd_col_darkgray,gd_col_tmp,gd_col_text; //declarate gd color
+int gd_col_black,gd_col_white,gd_col_gray,gd_col_darkgray,gd_col_green,gd_col_tmp,gd_col_text; //declarate gd color
 int gd_x_temp,gd_x_vbat,gd_x_cputemp,gd_x_cpuload,gd_x_wifi,gd_x_time; 	//declare gd x position
 char gd_vbat_chararray[14];				//battery voltage gd string
 char gd_cpu_chararray[9];					//cpu gd string
@@ -147,10 +147,6 @@ void show_usage(void){
 }
 
 int main(int argc, char* argv[]){
-	//timestamp_t t0 = get_timestamp();
-	//printf("%i\n",argc);
-	//exit(1);
-	
 	if(argc<3){show_usage();return 1;} //wrong arguments count
 	
 	for(int i=1;i<argc;++i){ //argument to variable
@@ -169,35 +165,28 @@ int main(int argc, char* argv[]){
 		}else if(strcmp(argv[i],"-o")==0){vbat_output_path=(char*)argv[i+1]; if(access(vbat_output_path,W_OK)!=0){printf("Failed, %s not writable\n",vbat_output_path);return 1;}}
 	}
 
-	if(i2c_address<0||adc_vref<0||adc_resolution<0||divider_r1<0||divider_r2<0||vbatlow_value<0){battery_enabled=false;battery_log_enabled=false;printf("Warning, some arguments needed to get battery data are not set\n");} //user miss some arguments for battery
+	if(i2c_address<0||adc_vref<0||adc_resolution<0||divider_r1<0||divider_r2<0){battery_enabled=false;battery_log_enabled=false;printf("Warning, some arguments needed to get battery data are not set, battery monitoring disable\n");} //user miss some arguments for battery
+	if(vbatlow_value<0){printf("Warning, low battery voltage not set, text color will stay unchanged\n");} //user miss some arguments for battery
 	
-	if(vbat_output_path==NULL){printf("Failed, missing path output\n");show_usage();return 1;} //user miss some needed arguments
-	if(gd_image_w<1||gd_image_h<1){printf("Warning, missing image size, no png will be output\n");png_enabled=false;} //no png output
+	if(vbat_output_path==NULL){printf("Failed, missing output path\n");show_usage();return 1;} //user miss some needed arguments
+	if(gd_image_w<1){printf("Warning, missing image width, png output disable\n");png_enabled=false;} //no png output
+	if(gd_image_h<1){printf("Warning, missing image height, png output disable\n");png_enabled=false;} //no png output
+		
+		
 	if(draw_interval<1){printf("Warning, wrong draw interval set, setting it to 15sec\n");draw_interval=15;} //wrong interval
+	if(battery_log_enabled&&battery_enabled){printf("Battery logging enable\n");}
 	
 	
-	chdir(vbat_output_path); //change directory
 	
 	
 	
 	
 	while(true){
+		//timestamp_t t0 = get_timestamp(); //benchmark
+		
+		chdir(vbat_output_path); //change directory
 		now = time(0); 						//current date/time
 		ltime = localtime(&now); 			//localtime object
-		
-		//Check if WIFI is working
-		if(access("/sbin/iw",F_OK)!=-1){ 																																													//check if 'iw' is installed
-			temp_filehandle = popen("iw dev wlan0 link 2> /dev/null | grep bitrate | cut -f 2 -d \":\" | cut -f 1 -d \"M\"", "r");	//open process pipe
-			if(temp_filehandle!=NULL){																																															//if process not fail
-				if(fgets(pbuffer,9,temp_filehandle)){																																									//if output something
-		  		wifi_linkspeed=atoi(pbuffer);																																												//convert output to int
-		  		if(wifi_linkspeed>0){wifi_enabled=true;}																																						//if value can be valid
-		  	}
-		  	pclose(temp_filehandle);																																															//close process pipe
-			}
-		}else{printf("Warning, WIFI link speed detection require 'iw' software\n");} //'iw' is not installed
-		
-		
 		
 		if(battery_enabled){
 			//-----------------------------Start of I2C part
@@ -225,20 +214,33 @@ int main(int argc, char* argv[]){
 				}
 			}
 		}
-	
+		
 		//-----------------------------Start of GD part
 		if(png_enabled){ //png output enable
+			//Check if WIFI is working
+			if(access("/sbin/iw",F_OK)!=-1){ 																																													//check if 'iw' is installed
+				temp_filehandle = popen("iw dev wlan0 link 2> /dev/null | grep bitrate | cut -f 2 -d \":\" | cut -f 1 -d \"M\"", "r");	//open process pipe
+				if(temp_filehandle!=NULL){																																															//if process not fail
+					if(fgets(pbuffer,9,temp_filehandle)){																																									//if output something
+			  		wifi_linkspeed=atoi(pbuffer);																																												//convert output to int
+			  		if(wifi_linkspeed>0){wifi_enabled=true;}																																						//if value can be valid
+			  	}
+			  	pclose(temp_filehandle);																																															//close process pipe
+				}
+			}else{printf("Warning, WIFI link speed detection require 'iw' software\n");} //'iw' is not installed
+			
 			gd_image = gdImageCreateTrueColor(gd_image_w,gd_image_h);																														//allocate gd image
 			
 			gd_col_black = gdImageColorAllocate(gd_image, 0, 0, 0);																															//since it is the first color declared, it will be the background
 			gd_col_white = gdImageColorAllocate(gd_image, 255, 255, 255);																												//declarate white color
 			gd_col_gray = gdImageColorAllocate(gd_image, 128, 128, 128);																												//declarate gray color
 			gd_col_darkgray = gdImageColorAllocate(gd_image, 64, 64, 64);																												//declarate dark gray color
+			gd_col_green = gdImageColorAllocate(gd_image, 0, 255, 0);																														//declarate green color
 			
 			if(battery_enabled){
-				gd_x_vbat=gd_char_w/2; /*gd_string_padding/2;*/																																					//gd x position for battery voltage
+				gd_x_vbat=gd_char_w/2; /*gd_string_padding/2;*/																																				//gd x position for battery voltage
 				gd_x_cputemp=gd_x_vbat+gd_string_padding+(sizeof(gd_vbat_chararray)-1)*(gd_char_w+1);																	//gd x position for cpu temp
-			}else{gd_x_cputemp=gd_string_padding/2;}																																								//gd x position for cpu temp if not battery probe
+			}else{gd_x_cputemp=gd_char_w/2; /*gd_string_padding/2;*/}																																//gd x position for cpu temp if not battery probe
 			
 			gd_x_cpuload=gd_x_cputemp+(sizeof(gd_cpu_chararray)-1)*(gd_char_w+1)+(gd_char_w+2);																			//gd x position for cpu load
 			gd_x_temp=gd_x_cpuload+(sizeof(gd_cpuload_chararray)-1)*(gd_char_w+1);																									//gd x position for cpu load
@@ -252,36 +254,37 @@ int main(int argc, char* argv[]){
 			//battery voltage char array to render
 			if(battery_enabled){
 				snprintf(gd_vbat_chararray,sizeof(gd_vbat_chararray),"Battery:%.2fv",vbat_value);																			//prepare char array to render
-				gd_col_tmp=rgbcolorstep(vbat_value,vbatlow_value,4.2,(int)0x00ff0000,(int)0x0000ff00);																//compute int color
-				gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF);				//allocate gd color
+				if(vbatlow_value<0){ 																																																	//low battery voltage not set
+					gd_col_text=gd_col_green; 																																														//allocate gd color (green)
+				}else{
+					gd_col_tmp=rgbcolorstep(vbat_value,vbatlow_value,4.2,(int)0x00ff0000,(int)0x0000ff00);																//compute int color
+					gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF);				//allocate gd color
+				}
+				
 				gdImageString(gd_image,gdFontTiny,gd_x_vbat,1,(unsigned char*)gd_vbat_chararray,gd_col_text);													//print battery info to gd image
 				gdImageLine(gd_image,gd_x_cputemp-1-gd_string_padding/2,1,gd_x_cputemp-1-gd_string_padding/2,gd_image_h-2,gd_col_darkgray); //draw separator
 			}
-		}
 		
-		//cpu temp char array to render
-		temp_filehandle = fopen("/sys/class/thermal/thermal_zone0/temp","r"); 																									//open sys file
-		fgets(cpu_buf, sizeof(cpu_buf),temp_filehandle);																																				//read value
-		fclose(temp_filehandle);																																																//close sys file
-		cpu_value=atoi(cpu_buf)/1000;																																														//compute temperature
-		if(png_enabled){ //png output enable
+			//cpu temp char array to render
+			temp_filehandle = fopen("/sys/class/thermal/thermal_zone0/temp","r"); 																									//open sys file
+			fgets(cpu_buf, sizeof(cpu_buf),temp_filehandle);																																				//read value
+			fclose(temp_filehandle);																																																//close sys file
+			cpu_value=atoi(cpu_buf)/1000;																																														//compute temperature
 			snprintf(gd_cpu_chararray,sizeof(gd_cpu_chararray),"CPU:%i°c",cpu_value); 																							//prepare char array to render
 			gd_col_tmp=rgbcolorstep(cpu_value,50,80,(int)0x0000ff00,(int)0x00ff0000); 																							//compute int color
 			gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF); 					//allocate gd color
 			gdImageString(gd_image,gdFontTiny,gd_x_cputemp,1,(unsigned char*)gd_cpu_chararray,gd_col_text);													//print cpu info to gd image
 			gdImageString(gd_image,gdFontTiny,gd_x_cpuload-(gd_char_w+2),1,(unsigned char*)"/",gd_col_gray);												//print cpu info separator to gd image
-		}
-		//cpu load char array to render - code from https://stackoverflow.com/questions/3769405/determining-cpu-utilization
-	  
-	  temp_filehandle = fopen("/proc/stat","r");
-	  fscanf(temp_filehandle,"%*s %Lf %Lf %Lf %Lf",&a[0],&a[1],&a[2],&a[3]);
-	  fclose(temp_filehandle);
-	  sleep(1);
-	  temp_filehandle = fopen("/proc/stat","r");
-	  fscanf(temp_filehandle,"%*s %Lf %Lf %Lf %Lf",&b[0],&b[1],&b[2],&b[3]);
-	  fclose(temp_filehandle);
-	  cpuload_value = (((b[0]+b[1]+b[2]) - (a[0]+a[1]+a[2])) / ((b[0]+b[1]+b[2]+b[3]) - (a[0]+a[1]+a[2]+a[3])))*100;
-		if(png_enabled){ //png output enable
+		
+			//cpu load char array to render - code from https://stackoverflow.com/questions/3769405/determining-cpu-utilization
+		  temp_filehandle = fopen("/proc/stat","r");
+		  fscanf(temp_filehandle,"%*s %Lf %Lf %Lf %Lf",&a[0],&a[1],&a[2],&a[3]);
+		  fclose(temp_filehandle);
+		  sleep(1);
+		  temp_filehandle = fopen("/proc/stat","r");
+		  fscanf(temp_filehandle,"%*s %Lf %Lf %Lf %Lf",&b[0],&b[1],&b[2],&b[3]);
+		  fclose(temp_filehandle);
+		  cpuload_value = (((b[0]+b[1]+b[2]) - (a[0]+a[1]+a[2])) / ((b[0]+b[1]+b[2]+b[3]) - (a[0]+a[1]+a[2]+a[3])))*100;
 			snprintf(gd_cpuload_chararray,sizeof(gd_cpuload_chararray),"%3i%%",cpuload_value); 																			//prepare char array to render
 			gd_col_tmp=rgbcolorstep(cpuload_value,25,100,(int)0x0000ff00,(int)0x00ff0000); 																					//compute integer color
 			gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF); 					//allocate gd color
@@ -289,10 +292,8 @@ int main(int argc, char* argv[]){
 			}else if(cpuload_value<10){gdImageString(gd_image,gdFontTiny,gd_x_cpuload,1,(unsigned char*)"00",gd_col_gray);}					//print cpu load gray 00 padding
 			gdImageString(gd_image,gdFontTiny,gd_x_cpuload,1,(unsigned char*)gd_cpuload_chararray,gd_col_text); 										//print cpu load
 			gdImageLine(gd_image,gd_x_temp+1+gd_string_padding/2,1,gd_x_temp+1+gd_string_padding/2,gd_image_h-2,gd_col_darkgray); 				//draw separator
-		}
 		
-		//wifi char array to render
-		if(png_enabled){ //png output enable
+			//wifi char array to render
 			if(wifi_enabled){
 				gdImageLine(gd_image,gd_x_temp+1+gd_string_padding/2,(gd_image_h/2)-1,gd_x_wifi-1-gd_string_padding/2,(gd_image_h/2)-1,gd_col_darkgray); //filler
 				gdImageLine(gd_image,gd_x_wifi-1-gd_string_padding/2,1,gd_x_wifi-1-gd_string_padding/2,gd_image_h-2,gd_col_darkgray); 			//draw separator
@@ -306,33 +307,19 @@ int main(int argc, char* argv[]){
 			gdImageLine(gd_image,gd_x_time-1-gd_string_padding/2,1,gd_x_time-1-gd_string_padding/2,gd_image_h-2,gd_col_darkgray); 				//draw separator
 			snprintf(gd_time_chararray,sizeof(gd_time_chararray),"%02i:%02i",ltime->tm_hour,ltime->tm_min); 												//prepare char array to render
 			gdImageString(gd_image,gdFontTiny,gd_x_time,1,(unsigned char*)gd_time_chararray,gd_col_white); 													//print time
-		
-		
-		
+			
 			gdImageLine(gd_image,0,gd_image_h-1,gd_image_w,gd_image_h-1,gd_col_gray); 				//bottom decoration
-		
-		
+			
 			temp_filehandle = fopen("fb_footer.png","wb"); 																																					//open image file
 			gdImagePng(gd_image,temp_filehandle);																																										//output gd image to file
 			fclose(temp_filehandle);																																																//close image file
 			gdImageDestroy(gd_image);																																																//free gd image memory
-			
 		}
-	
-		//write str file for overlay
-		/* no more used
-		temp_filehandle = fopen("vbat.srt","wb"); 																																											//open log file
-		fprintf(temp_filehandle,"1\n00:00:00,00 --> 00:00:05,00\n");																																											//write log
-		if(battery_enabled){fprintf(temp_filehandle,"Battery:%.2fv - ",vbat_value);} //battery
-		fprintf(temp_filehandle,"CPU:%i\u00B0c/%i%\u0025 - ",cpu_value,cpuload_value); //cpu
-		if(wifi_enabled){fprintf(temp_filehandle,"%iMBit/s - ",wifi_linkspeed);} //wifi
-		fprintf(temp_filehandle,"%02i:%02i",ltime->tm_hour,ltime->tm_min); //time
-		fclose(temp_filehandle);	
-		*/
-	
+		
 		sleep(draw_interval); //sleep
 	}
-/*
+	
+/*//benchmark
 timestamp_t t1 = get_timestamp();
 	double secs = (t1 - t0) / 1000000.0L;
 	printf("%g\n",secs);
