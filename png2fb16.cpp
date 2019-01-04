@@ -61,31 +61,31 @@ int main(int argc, char* argv[]){
 	sleep(2);
 	
 	for(int i=1;i<argc;++i){ //argument to variable
-		if(strcmp(argv[i],"-i")==0){png_path=(char*)argv[i+1]; if(access(png_path,R_OK)!=0){printf("Failed, %s not readable\n",png_path);return 1;} //png file path
+		if(strcmp(argv[i],"-i")==0){png_path=(char*)argv[i+1]; if(access(png_path,R_OK)!=0){printf("png2fb16 : Failed, %s not readable\n",png_path);return 1;} //png file path
 		}else if(strcmp(argv[i],"-interval")==0){draw_interval=atoi(argv[i+1]);
-		}else if(strcmp(argv[i],"-f")==0){framebuffer_path=(char*)argv[i+1]; if(access(framebuffer_path,W_OK)){printf("Failed, %s not writable\n",framebuffer_path);return 1;} //framebuffer device path
+		}else if(strcmp(argv[i],"-f")==0){framebuffer_path=(char*)argv[i+1]; if(access(framebuffer_path,W_OK)){printf("png2fb16 : Failed, %s not writable\n",framebuffer_path);return 1;} //framebuffer device path
 		}else if(strcmp(argv[i],"-xoffset")==0){xoffset=atoi(argv[i+1]); if(xoffset<0){xoffset=0;} //image print x offset
 		}else if(strcmp(argv[i],"-yoffset")==0){yoffset=atoi(argv[i+1]); if(yoffset<0){yoffset=0;}} //image print y offset
 	}
 
-	if(xoffset<0||yoffset<0){printf("Failed, offsets are not set\n");return 1;} //user miss offsets
-	if(draw_interval<1){printf("Warning, wrong draw interval set, setting it to 15sec\n");draw_interval=15;} //wrong interval
+	if(xoffset<0||yoffset<0){printf("png2fb16 : Failed, offsets are not set\n");return 1;} //user miss offsets
+	if(draw_interval<1){printf("png2fb16 : Warning, wrong draw interval set, setting it to 15sec\n");draw_interval=15;} //wrong interval
 	
 	
 	
 	struct fb_var_screeninfo vinfo; //framebuffer variable information variable
 	struct fb_fix_screeninfo finfo; //framebuffer fixed information variable
 	int framebuffer_handle = open(framebuffer_path,O_RDWR); //framebuffer handle
-	if(framebuffer_handle==-1){printf("Failed to open framebuffer device\n");return 1;} //problem with handle
-	if(ioctl(framebuffer_handle,FBIOGET_FSCREENINFO,&finfo)==-1){printf("Failed to read framebuffer fixed information\n");return 1;} //problem with framebuffer fixed information
-	if(ioctl(framebuffer_handle,FBIOGET_VSCREENINFO,&vinfo)==-1){printf("Failed to read framebuffer variable information\n");return 1;} //problem with framebuffer variable information
-	if(vinfo.bits_per_pixel!=16){printf("Failed, current framebuffer is %dbpp, require 16bpp\n",vinfo.bits_per_pixel);return 1;} //wrong framebuffer bpp
+	if(framebuffer_handle==-1){printf("png2fb16 : Failed to open framebuffer device\n");return 1;} //problem with handle
+	if(ioctl(framebuffer_handle,FBIOGET_FSCREENINFO,&finfo)==-1){printf("png2fb16 : Failed to read framebuffer fixed information\n");return 1;} //problem with framebuffer fixed information
+	if(ioctl(framebuffer_handle,FBIOGET_VSCREENINFO,&vinfo)==-1){printf("png2fb16 : Failed to read framebuffer variable information\n");return 1;} //problem with framebuffer variable information
+	if(vinfo.bits_per_pixel!=16){printf("png2fb16 : Failed, current framebuffer is %dbpp, require 16bpp\n",vinfo.bits_per_pixel);return 1;} //wrong framebuffer bpp
 	
 	int fb_width=vinfo.xres; int fb_height=vinfo.yres; //get framebuffer size
 	
 	long int framebuffer_length=vinfo.xres*vinfo.yres*vinfo.bits_per_pixel/8; //compute framebuffer size
 	char *framebuffer_map=(char*)mmap(0,framebuffer_length,PROT_READ|PROT_WRITE, MAP_SHARED,framebuffer_handle,0); //map framebuffer device to memory
-	if((int)framebuffer_map==-1){printf("Failed to map the framebuffer device to memory\n");return 1;} //problem when mapping framebuffer to memory
+	if((int)framebuffer_map==-1){printf("png2fb16 : Failed to map the framebuffer device to memory\n");return 1;} //problem when mapping framebuffer to memory
 	
 	gdImagePtr gd_image; //declare gd image
 	FILE *filehandle; //declare png file handle

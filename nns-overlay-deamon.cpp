@@ -86,47 +86,47 @@ int main(int argc, char *argv[]){
 		//}else if(strcmp(argv[i],"-height")==0){bar_height=atoi(argv[i+1]);}
 	}
 	
-	if(gpio_pin<0||/*screen_width<0||*/duration<0){printf("Failed, missing some arguments\n");show_usage();return 1;} //user miss some needed arguments
-	if(gpio_interval<100||gpio_interval>600){printf("Warning, wrong cheking interval set, setting it to 200msec\n");gpio_interval=200;} //wrong interval
-	if(gpio_reverselogic){printf("Reversed activelow logic\n");}
+	if(gpio_pin<0||/*screen_width<0||*/duration<0){printf("nns-overlay-deamon : Failed, missing some arguments\n");show_usage();return 1;} //user miss some needed arguments
+	if(gpio_interval<100||gpio_interval>600){printf("nns-overlay-deamon : Warning, wrong cheking interval set, setting it to 200msec\n");gpio_interval=200;} //wrong interval
+	if(gpio_reverselogic){printf("nns-overlay-deamon : Reversed activelow logic\n");}
 	
-	if(gpio_lowbatpin<0){printf("Warning, no pin set to monitor low battery, skipped\n");}else{
-	if(gpio_lowbatreverselogic){printf("Reversed low battery activelow logic\n");}}
+	if(gpio_lowbatpin<0){printf("nns-overlay-deamon : Warning, no pin set to monitor low battery, skipped\n");}else{
+	if(gpio_lowbatreverselogic){printf("nns-overlay-deamon : Reversed low battery activelow logic\n");}}
 	
 	while(!png_exist){
 		if(access(png_path,R_OK)!=0){
-			printf("Failed, %s not readable, retrying\n",png_path);
+			printf("nns-overlay-deamon : Failed, %s not readable, retrying\n",png_path);
 			sleep(5);
 		}else{
-			printf("%s found\n",png_path);
+			printf("nns-overlay-deamon : %s found\n",png_path);
 			png_exist=true;
 		}
 	}
 	
 	while(!gpio_exported){ //gpio pin not exported
 		if(access(gpio_path,R_OK)!=0){ //gpio not accessible, try to export
-			printf("%s not accessible, trying export\n",gpio_path); //debug
+			printf("nns-overlay-deamon : %s not accessible, trying export\n",gpio_path); //debug
 			temp_filehandle = fopen("/sys/class/gpio/export","wo"); //open file handle
 			fprintf(temp_filehandle,"%d", gpio_pin); //write pin number
 			fclose(temp_filehandle); //close file handle
 			sleep(2); //sleep to avoid spam
 		}else{
 			gpio_exported=true; //gpio export with success
-			printf("%s is accessible\n",gpio_path); //debug
+			printf("nns-overlay-deamon : %s is accessible\n",gpio_path); //debug
 		}
 	}
 	
 	if(gpio_lowbatpin>-1){ //low battery enable
 		while(!gpio_lowbatexported){ //gpio pin for low battery not exported
 			if(access(gpio_path,R_OK)!=0){ //gpio not accessible, try to export
-				printf("%s not accessible, trying export\n",gpio_lowbatpath); //debug
+				printf("nns-overlay-deamon : %s not accessible, trying export\n",gpio_lowbatpath); //debug
 				temp_filehandle = fopen("/sys/class/gpio/export","wo"); //open file handle
 				fprintf(temp_filehandle,"%d",gpio_lowbatpin); //write pin number
 				fclose(temp_filehandle); //close file handle
 				sleep(2); //sleep to avoid spam
 			}else{
 				gpio_lowbatexported=true; //gpio export with success
-				printf("%s is accessible\n",gpio_lowbatpath); //debug
+				printf("nns-overlay-deamon : %s is accessible\n",gpio_lowbatpath); //debug
 			}
 		}
 	}
@@ -143,7 +143,7 @@ int main(int argc, char *argv[]){
 	//check pin direction
 	chdir(gpio_path); //change directory to gpio sysfs
 	temp_filehandle = fopen("direction","r"); fgets(gpio_buffer,sizeof(gpio_buffer),temp_filehandle); fclose(temp_filehandle); //read gpio direction
-	if(strcmp(gpio_buffer,"out")==0){printf("Failed, gpio pin direction is %s\n",gpio_buffer);return(1); //check gpio direction
+	if(strcmp(gpio_buffer,"out")==0){printf("nns-overlay-deamon : Failed, gpio pin direction is %s\n",gpio_buffer);return(1); //check gpio direction
 	}/*else{printf("GPIO: direction is %s\n",gpio_buffer);}*/
 	
 	//check if pin is active low
@@ -156,7 +156,7 @@ int main(int argc, char *argv[]){
 	if(gpio_lowbatpin>-1){ //low battery enable
 		chdir(gpio_lowbatpath); //change directory to gpio sysfs
 		temp_filehandle = fopen("direction","r"); fgets(gpio_buffer,sizeof(gpio_buffer),temp_filehandle); fclose(temp_filehandle); //read gpio direction
-		if(strcmp(gpio_buffer,"out")==0){printf("Failed, gpio low battery pin direction is %s\n",gpio_buffer);return(1); //check gpio direction
+		if(strcmp(gpio_buffer,"out")==0){printf("nns-overlay-deamon : Failed, gpio low battery pin direction is %s\n",gpio_buffer);return(1); //check gpio direction
 		}/*else{printf("GPIO: direction is %s\n",gpio_buffer);}*/
 		
 		//check if low battery pin is active low

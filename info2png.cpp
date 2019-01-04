@@ -151,7 +151,7 @@ int main(int argc, char* argv[]){
 	
 	for(int i=1;i<argc;++i){ //argument to variable
 		if(strcmp(argv[i],"-help")==0){show_usage();return 1;
-		}else if(strcmp(argv[i],"-i2cbus")==0){i2c_bus=(char*)argv[i+1]; if(access(i2c_bus,R_OK)!=0){printf("Failed, %s not readable\n",i2c_bus);battery_enabled=false;}
+		}else if(strcmp(argv[i],"-i2cbus")==0){i2c_bus=(char*)argv[i+1]; if(access(i2c_bus,R_OK)!=0){printf("info2png : Failed, %s not readable\n",i2c_bus);battery_enabled=false;}
 		}else if(strcmp(argv[i],"-i2caddress")==0){sscanf(argv[i+1], "%x", &i2c_address);/*htoi(argv[i+1])*/;
 		}else if(strcmp(argv[i],"-adcvref")==0){adc_vref=atof(argv[i+1]);
 		}else if(strcmp(argv[i],"-adcres")==0){adc_resolution=atoi(argv[i+1]);
@@ -162,19 +162,19 @@ int main(int argc, char* argv[]){
 		}else if(strcmp(argv[i],"-width")==0){gd_image_w=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-height")==0){gd_image_h=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-interval")==0){draw_interval=atoi(argv[i+1]);
-		}else if(strcmp(argv[i],"-o")==0){vbat_output_path=(char*)argv[i+1]; if(access(vbat_output_path,W_OK)!=0){printf("Failed, %s not writable\n",vbat_output_path);return 1;}}
+		}else if(strcmp(argv[i],"-o")==0){vbat_output_path=(char*)argv[i+1]; if(access(vbat_output_path,W_OK)!=0){printf("info2png : Failed, %s not writable\n",vbat_output_path);return 1;}}
 	}
 
-	if(i2c_address<0||adc_vref<0||adc_resolution<0||divider_r1<0||divider_r2<0){battery_enabled=false;battery_log_enabled=false;printf("Warning, some arguments needed to get battery data are not set, battery monitoring disable\n");} //user miss some arguments for battery
-	if(vbatlow_value<0){printf("Warning, low battery voltage not set, text color will stay unchanged\n");} //user miss some arguments for battery
+	if(i2c_address<0||adc_vref<0||adc_resolution<0||divider_r1<0||divider_r2<0){battery_enabled=false;battery_log_enabled=false;printf("info2png : Warning, some arguments needed to get battery data are not set, battery monitoring disable\n");} //user miss some arguments for battery
+	if(vbatlow_value<0){printf("info2png : Warning, low battery voltage not set, text color will stay unchanged\n");} //user miss some arguments for battery
 	
-	if(vbat_output_path==NULL){printf("Failed, missing output path\n");show_usage();return 1;} //user miss some needed arguments
-	if(gd_image_w<1){printf("Warning, missing image width, png output disable\n");png_enabled=false;} //no png output
-	if(gd_image_h<1){printf("Warning, missing image height, png output disable\n");png_enabled=false;} //no png output
+	if(vbat_output_path==NULL){printf("info2png : Failed, missing output path\n");show_usage();return 1;} //user miss some needed arguments
+	if(gd_image_w<1){printf("info2png : Warning, missing image width, png output disable\n");png_enabled=false;} //no png output
+	if(gd_image_h<1){printf("info2png : Warning, missing image height, png output disable\n");png_enabled=false;} //no png output
 		
 		
-	if(draw_interval<1){printf("Warning, wrong draw interval set, setting it to 15sec\n");draw_interval=15;} //wrong interval
-	if(battery_log_enabled&&battery_enabled){printf("Battery logging enable\n");}
+	if(draw_interval<1){printf("info2png : Warning, wrong draw interval set, setting it to 15sec\n");draw_interval=15;} //wrong interval
+	if(battery_log_enabled&&battery_enabled){printf("info2png : Battery logging enable\n");}
 	
 	
 	
@@ -190,13 +190,13 @@ int main(int argc, char* argv[]){
 		
 		if(battery_enabled){
 			//-----------------------------Start of I2C part
-			if((i2c_handle=open(i2c_bus,O_RDWR))<0){printf("Failed to open the i2c bus : %s\n",i2c_bus);battery_enabled=false;}else{							//open i2c bus
-				if(ioctl(i2c_handle,I2C_SLAVE,i2c_address)<0){printf("Failed to get bus access : %04x\n",i2c_address);battery_enabled=false;}else{	//access i2c device
-					if(read(i2c_handle,i2c_buffer,2)!=2){printf("Failed to read data from the i2c bus\n");battery_enabled=false;;											//start reading data from i2c device
+			if((i2c_handle=open(i2c_bus,O_RDWR))<0){printf("info2png : Failed to open the i2c bus : %s\n",i2c_bus);battery_enabled=false;}else{							//open i2c bus
+				if(ioctl(i2c_handle,I2C_SLAVE,i2c_address)<0){printf("info2png : Failed to get bus access : %04x\n",i2c_address);battery_enabled=false;}else{	//access i2c device
+					if(read(i2c_handle,i2c_buffer,2)!=2){printf("info2png : Failed to read data from the i2c bus\n");battery_enabled=false;;											//start reading data from i2c device
 					}else{
 						adc_value=(i2c_buffer[0]<<8)|(i2c_buffer[1]&0xff);																																							//combine buffer bytes into integer
 						vbat_tmp_value=adc_value*(float)(adc_vref/adc_resolution)/(float)(divider_r2/(float)(divider_r1+divider_r2));										//compute battery voltage
-						if(vbat_tmp_value<1){printf("Warning, voltage < 1 volt, Probing failed\n");}else{vbat_value=vbat_tmp_value;}										//security
+						if(vbat_tmp_value<1){printf("info2png : Warning, voltage < 1 volt, Probing failed\n");}else{vbat_value=vbat_tmp_value;}										//security
 						
 						temp_filehandle = fopen("vbat.log","wb"); 																																											//open log file
 						fprintf(temp_filehandle,"%.2f",vbat_value);																																											//write log
@@ -227,7 +227,7 @@ int main(int argc, char* argv[]){
 			  	}
 			  	pclose(temp_filehandle);																																															//close process pipe
 				}
-			}else{printf("Warning, WIFI link speed detection require 'iw' software\n");} //'iw' is not installed
+			}else{printf("info2png : Warning, WIFI link speed detection require 'iw' software\n");} //'iw' is not installed
 			
 			gd_image = gdImageCreateTrueColor(gd_image_w,gd_image_h);																														//allocate gd image
 			
