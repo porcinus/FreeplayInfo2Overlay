@@ -118,7 +118,7 @@ int main(int argc, char *argv[]){
 	
 	if(gpio_lowbatpin>-1){ //low battery enable
 		while(!gpio_lowbatexported){ //gpio pin for low battery not exported
-			if(access(gpio_path,R_OK)!=0){ //gpio not accessible, try to export
+			if(access(gpio_lowbatpath,R_OK)!=0){ //gpio not accessible, try to export
 				printf("nns-overlay-deamon : %s not accessible, trying export\n",gpio_lowbatpath); //debug
 				temp_filehandle = fopen("/sys/class/gpio/export","wo"); //open file handle
 				fprintf(temp_filehandle,"%d",gpio_lowbatpin); //write pin number
@@ -186,6 +186,7 @@ int main(int argc, char *argv[]){
 
 
 	while(true){
+		
 		chdir(gpio_path); //change directory to gpio sysfs
 		temp_filehandle = fopen("value","r"); fgets(gpio_buffer,sizeof(gpio_buffer),temp_filehandle); fclose(temp_filehandle); //read gpio value
 		gpio_value=atoi(gpio_buffer); //parse gpio value
@@ -193,6 +194,7 @@ int main(int argc, char *argv[]){
 			chdir(program_path); //change directory
 			system(img2dispmanx_exec_path); //display overlay, blocking
 		}
+		
 		
 		if(gpio_lowbatpin>-1){ //low battery enable
 			chdir(gpio_lowbatpath); //change directory to gpio sysfs
