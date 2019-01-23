@@ -106,6 +106,7 @@ long double a[4], b[4];						//use to compute cpu load
 char cpu_buf[7];									//cpu read buffer
 int cpuload_value = 0;						//cpu load
 bool battery_enabled = true;			//battery probe boolean
+bool battery_set = false;					//all informations are set for battery probe boolean
 bool battery_log_enabled = false;	//battery log from start boolean
 bool png_enabled = true;					//png output boolean
 int uptime_value = 0;							//uptime value
@@ -169,7 +170,9 @@ int main(int argc, char* argv[]){
 		}else if(strcmp(argv[i],"-o")==0){vbat_output_path=(char*)argv[i+1]; if(access(vbat_output_path,W_OK)!=0){printf("info2png : Failed, %s not writable\n",vbat_output_path);return 1;}}
 	}
 
-	if(i2c_address<0||adc_vref<0||adc_resolution<0||divider_r1<0||divider_r2<0){battery_enabled=false;battery_log_enabled=false;printf("info2png : Warning, some arguments needed to get battery data are not set, battery monitoring disable\n");} //user miss some arguments for battery
+	if(i2c_address<=0||adc_vref<=0||adc_resolution<=0||divider_r1<=0||divider_r2<=0){battery_enabled=false;battery_log_enabled=false;printf("info2png : Warning, some arguments needed to get battery data are not set, battery monitoring disable\n");} //user miss some arguments for battery
+	if(i2c_address>0||adc_vref>0||adc_resolution>0||divider_r1>0||divider_r2>0){battery_set=true;} //all informations are set for battery probe, use in case of read failure to retry
+	
 	if(vbatlow_value<0){printf("info2png : Warning, low battery voltage not set, text color will stay unchanged\n");} //user miss some arguments for battery
 	
 	if(vbat_output_path==NULL){printf("info2png : Failed, missing output path\n");show_usage();return 1;} //user miss some needed arguments
@@ -192,7 +195,8 @@ int main(int argc, char* argv[]){
 		now = time(0); 						//current date/time
 		ltime = localtime(&now); 			//localtime object
 		
-		if(battery_enabled){
+		if(battery_enabled||(!battery_enabled&&battery_set)){
+			battery_enabled=true; //retry
 			//-----------------------------Start of I2C part
 			if((i2c_handle=open(i2c_bus,O_RDWR))<0){printf("info2png : Failed to open the i2c bus : %s\n",i2c_bus);battery_enabled=false;}else{							//open i2c bus
 				if(ioctl(i2c_handle,I2C_SLAVE,i2c_address)<0){printf("info2png : Failed to get bus access : %04x\n",i2c_address);battery_enabled=false;}else{	//access i2c device
