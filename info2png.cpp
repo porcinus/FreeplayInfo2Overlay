@@ -3,7 +3,7 @@ NNS @ 2018
 info2png
 It create a PNG/log file contening CPU load and temperature, Wifi link speed and time, Battery voltage is optional.
 */
-const char programversion[]="0.1d";
+const char programversion[]="0.1e";
 
  /* Bring in gd library functions */
 #include "gd.h"
@@ -64,8 +64,8 @@ int i2c_address=-1;							//i2c device adress, found via 'i2cdetect'
 float adc_vref=-1;							//in volt, vdd of the adc chip
 int adc_resolution=-1;					//256:8bits, 1024:10bits, 4096:12bits, 65535:16bits
 
-int divider_r1=-1;							//in ohm
-int divider_r2=-1;							//in ohm
+int divider_r1=0;							//in ohm
+int divider_r2=0;							//in ohm
 
 float vbatlow_value = -1;				//battery low voltage
 
@@ -106,6 +106,7 @@ long double a[4], b[4];						//use to compute cpu load
 char cpu_buf[7];									//cpu read buffer
 int cpuload_value = 0;						//cpu load
 bool battery_enabled = true;			//battery probe boolean
+bool resistor_divider_enabled = true;			//battery probe boolean
 bool battery_set = false;					//all informations are set for battery probe boolean
 bool battery_log_enabled = false;	//battery log from start boolean
 bool png_enabled = true;					//png output boolean
@@ -169,9 +170,16 @@ int main(int argc, char* argv[]){
 		}else if(strcmp(argv[i],"-ip")==0){wifi_showip=true;
 		}else if(strcmp(argv[i],"-o")==0){vbat_output_path=(char*)argv[i+1]; if(access(vbat_output_path,W_OK)!=0){printf("info2png : Failed, %s not writable\n",vbat_output_path);return 1;}}
 	}
-
+/*
 	if(i2c_address<=0||adc_vref<=0||adc_resolution<=0||divider_r1<=0||divider_r2<=0){battery_enabled=false;battery_log_enabled=false;printf("info2png : Warning, some arguments needed to get battery data are not set, battery monitoring disable\n");} //user miss some arguments for battery
 	if(i2c_address>0||adc_vref>0||adc_resolution>0||divider_r1>0||divider_r2>0){battery_set=true;} //all informations are set for battery probe, use in case of read failure to retry
+	*/
+	
+	if(i2c_address<=0||adc_vref<=0||adc_resolution<=0||divider_r1<0||divider_r2<0){battery_enabled=false;battery_log_enabled=false;printf("info2png : Warning, some arguments needed to get battery data are not set, battery monitoring disable\n");} //user miss some arguments for battery
+	if(i2c_address>0||adc_vref>0||adc_resolution>0){battery_set=true;} //all informations are set for battery probe, use in case of read failure to retry
+	if(divider_r1==0||divider_r2==0){resistor_divider_enabled=false;printf("info2png : Warning, resistor values are not set, resistor divider compute disable\n");} //user miss some arguments for resistor values
+	
+	
 	
 	if(vbatlow_value<0){printf("info2png : Warning, low battery voltage not set, text color will stay unchanged\n");} //user miss some arguments for battery
 	
@@ -203,7 +211,8 @@ int main(int argc, char* argv[]){
 					if(read(i2c_handle,i2c_buffer,2)!=2){printf("info2png : Failed to read data from the i2c bus\n");battery_enabled=false;;											//start reading data from i2c device
 					}else{
 						adc_value=(i2c_buffer[0]<<8)|(i2c_buffer[1]&0xff);																																							//combine buffer bytes into integer
-						vbat_tmp_value=adc_value*(float)(adc_vref/adc_resolution)/(float)(divider_r2/(float)(divider_r1+divider_r2));										//compute battery voltage
+						if(resistor_divider_enabled){vbat_tmp_value=adc_value*(float)(adc_vref/adc_resolution)/(float)(divider_r2/(float)(divider_r1+divider_r2));		//compute battery voltage with resistor divider
+						}else{vbat_tmp_value=adc_value*(float)(adc_vref/adc_resolution);}																																							//compute battery voltage only with adc vref
 						if(vbat_tmp_value<1){printf("info2png : Warning, voltage < 1 volt, Probing failed\n");}else{vbat_value=vbat_tmp_value;}										//security
 						
 						temp_filehandle = fopen("vbat.log","wb"); 																																											//open log file
