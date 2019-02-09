@@ -130,8 +130,8 @@ void show_usage(void){
 	printf("\t-i2caddress, i2c device adress, found via 'i2cdetect' [Optional, used for battery voltage]\n");
 	printf("\t-adcvref, in volt, vdd of the adc chip [Optional, used for battery voltage]\n");
 	printf("\t-adcres, ADC resolution: 256=8bits, 1024=10bits, 4096=12bits, 65535=16bits [Optional, used for battery voltage]\n");
-	printf("\t-r1value, in ohm [Optional, used for battery voltage]\n");
-	printf("\t-r2value, in ohm [Optional, used for battery voltage]\n");
+	printf("\t-r1value, in ohm [Optional, used for battery voltage], disable resistor divider if not set\n");
+	printf("\t-r2value, in ohm [Optional, used for battery voltage], disable resistor divider if not set\n");
 	printf("\t-vbatlow, in volt, low battery voltage to set text in red color [Optional, used for battery voltage]\n");
 	printf("\t-vbatlogging, enable battery voltage logging, data will be put in 'vbat-start.log', format 'uptime;vbat' [Optional, used for battery voltage monitoring]\n");
 	printf("\t-width, in px, width of 'fb_footer.png' [Optional, used for generate png]\n");
