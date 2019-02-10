@@ -13,7 +13,7 @@ TimeoutStartSec=0
 # write to journal or within script to separate log file
 # StandardOutput=/home/pi/NNS/FreeplayInfo2Overlay/service/logs/info2framebuffer-nobattery-out.log
 # StandardError=/home/pi/NNS/FreeplayInfo2Overlay/service/logs/info2framebuffer-nobattery-err.log
-Restart=Always
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
