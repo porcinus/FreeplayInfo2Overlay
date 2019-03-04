@@ -1,2 +1,3 @@
 info2png:
 - if adc reading fail, allow 3 retry before skiping for the current loop.
+- switch to hsv for color stepping
