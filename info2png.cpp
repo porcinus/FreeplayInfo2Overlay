@@ -3,41 +3,20 @@ NNS @ 2018
 info2png
 It create a PNG/log file contening CPU load and temperature, Wifi link speed and time, Battery voltage is optional.
 */
-const char programversion[]="0.1e";
-
- /* Bring in gd library functions */
-#include "gd.h"
-#include <gdfontt.h> /*on va utiliser la police gdFontTiny */
-
-/* Bring in standard I/O so we can output the PNG to a file */
-#include <stdio.h>
-#include <cstring>
-
-#include <unistd.h>				//Needed for I2C port
-#include <fcntl.h>				//Needed for I2C port
-#include <sys/ioctl.h>			//Needed for I2C port
-#include <linux/i2c-dev.h>		//Needed for I2C port
-
-#include <ctime>
-#include <locale.h>
-#include <limits.h>
-
-/*//benchmark
-   #include <sys/time.h>
-    typedef unsigned long long timestamp_t;
-
-    static timestamp_t
-    get_timestamp ()
-    {
-      struct timeval now;
-      gettimeofday (&now, NULL);
-      return  now.tv_usec + (timestamp_t)now.tv_sec * 1000000;
-    }
-*/
+const char programversion[]="0.1f"; //program version
 
 
-
-
+#include "gd.h"							//libgd
+#include <gdfontt.h>				//libgd tinyfont
+#include <stdio.h>					//stream io
+#include <cstring>					//string
+#include <unistd.h>					//standard
+#include <fcntl.h>					//file io
+#include <sys/ioctl.h>			//sys io
+#include <linux/i2c-dev.h>	//i2c library
+#include <ctime>						//time and date
+#include <locale.h>					//locale
+#include <limits.h>					//limits
 
 int nns_map(float x,float in_min,float in_max,int out_min,int out_max){
   if(x<in_min){return out_min;}
@@ -55,100 +34,102 @@ int rgbcolorstep(float x,float in_min,float in_max,int color_min,int color_max){
 
  
 
-//GD
-char *vbat_output_path;					//path to battery voltage output path
-
-//I2C 
-char *i2c_bus;									//path to i2c bus
-int i2c_address=-1;							//i2c device adress, found via 'i2cdetect'
-float adc_vref=-1;							//in volt, vdd of the adc chip
-int adc_resolution=-1;					//256:8bits, 1024:10bits, 4096:12bits, 65535:16bits
-
-int divider_r1=0;							//in ohm
-int divider_r2=0;							//in ohm
-
-float vbatlow_value = -1;				//battery low voltage
-
-int gd_image_w = -1;						//gd image width
-int gd_image_h = -1;						//gd image height
-
-int draw_interval=-1; //draw interval interval
-
-/*######################## Resistor divider diagram
-# (Battery) Vin--+
-#                R1
-#                +-----Vout (ADC)
-#                R2
-# (Battery) Gnd--+-----Gnd (Avoid if battery power ADC chip)
-#########################*/
+//General variables
+char *data_output_path;								//path where output final data
+int update_interval=-1;								//data output interval
+FILE *temp_filehandle;								//file handle to get cpu temp/usage
+bool battery_enabled=true;						//battery probe boolean
+bool resistor_divider_enabled=true;		//battery probe boolean
+bool battery_set=false;								//all informations are set for battery probe boolean
+bool battery_log_enabled=false;				//battery log from start boolean
+bool png_enabled=true;								//png output boolean
+bool wifi_enabled=false;							//wifi boolean
+bool wifi_showip=false;								//ip address instead of link speed
 
 
 
-FILE *temp_filehandle;						//file handle to get cpu temp/usage
-int i2c_handle;           				//i2c handle io
-char i2c_buffer[10] = {0};				//i2c data buffer
-int adc_value = 0;								//adc step value
-float vbat_tmp_value = 0.;				//temporary battery voltage
-float vbat_value = 0.;						//battery voltage
-gdImagePtr gd_image;							//gd image
-const int gd_char_w = 4; 					//gd image char width
-const int gd_string_padding = 15; //gd image padding width
-int gd_col_black,gd_col_white,gd_col_gray,gd_col_darkgray,gd_col_darkergray,gd_col_green,gd_col_tmp,gd_col_text; //declarate gd color
-int gd_x_temp,gd_x_vbat,gd_x_cputemp,gd_x_cpuload,gd_x_wifi,gd_x_time; 	//declare gd x position
-int gd_wifi_charcount,gd_vbat_charcount,gd_cpu_charcount,gd_cpuload_charcount,gd_time_charcount;
+
+//I2C variables
+char *i2c_bus;						//path to i2c bus
+int i2c_address=-1;				//i2c device adress, found via 'i2cdetect'
+int i2c_handle;						//i2c handle io
+char i2c_buffer[10]={0};	//i2c data buffer
+
+
+
+//ADC variables
+float adc_vref=-1;								//in volt, vdd of the adc chip
+int adc_resolution=4096;						//256:8bits, 1024:10bits, 4096:12bits (default), 65535:16bits
+int divider_r1=0, divider_r2=0;		//resistor divider value in ohm or kohm, check show_usage(void) for infomations
+int adc_raw_value=0;							//adc step value
+int adc_read_retry=0;							//adc reading retry if failure
+
+
+
+
+//GD variables
+gdImagePtr gd_image;								//gd image
+int gd_image_w=-1, gd_image_h=-1;		//gd image size
+const int gd_char_w=4; 							//gd image char width
+const int gd_string_padding=15;			//gd image padding width
+int gd_col_black, gd_col_white, gd_col_gray, gd_col_darkgray, gd_col_darkergray, gd_col_green, gd_col_tmp, gd_col_text; //gd colors
+
+
+
+
+int gd_x_temp, gd_x_vbat, gd_x_cputemp, gd_x_cpuload, gd_x_wifi, gd_x_time; //gd x text position
+int gd_wifi_charcount, gd_vbat_charcount, gd_cpu_charcount, gd_cpuload_charcount, gd_time_charcount; //gd text char count
 char gd_vbat_chararray[20];				//battery voltage gd string
-char gd_cpu_chararray[15];					//cpu gd string
-char gd_cpuload_chararray[10];			//cpu load gd string
+char gd_cpu_chararray[15];				//cpu gd string
+char gd_cpuload_chararray[10];		//cpu load gd string
 char gd_wifi_chararray[20];				//wifi string
 char gd_time_chararray[10];				//time gd string
-int cpu_value = 0;								//cpu temp
+int cpu_value=0;									//cpu temp
 long double a[4], b[4];						//use to compute cpu load
 char cpu_buf[7];									//cpu read buffer
-int cpuload_value = 0;						//cpu load
-bool battery_enabled = true;			//battery probe boolean
-bool resistor_divider_enabled = true;			//battery probe boolean
-bool battery_set = false;					//all informations are set for battery probe boolean
-bool battery_log_enabled = false;	//battery log from start boolean
-bool png_enabled = true;					//png output boolean
-int uptime_value = 0;							//uptime value
-bool wifi_enabled = false;				//wifi boolean
-bool wifi_showip = false;					//ip address instead of link speed
-int wifi_linkspeed = 0;						//wifi link speed
+int cpuload_value=0;							//cpu load
+int uptime_value=0;								//uptime value
+int wifi_linkspeed=0;							//wifi link speed
 char pbuffer[20];									//buffer use to read process pipe
-
-
-
 time_t now; 											//current date/time
 tm *ltime; 												//localtime object
 
+
+//Battery variables
+float vbat_value=0.;					//battery voltage, used as backup if read fail
+float vbatlow_value=-1;				//battery low voltage
+
+
+
+
+
 void show_usage(void){
-	printf("Example with battery: ./info2png -i2cbus \"/dev/i2c-1\" -i2caddress 0x4d -adcvref 3.65 -adcres 4096 -r1value 91 -r2value 220 -vbatlow 3.5 -vbatlogging -width 304 -height 10 -o \"/dev/shm\"\n");
-	printf("Example without battery: ./info2png -width 304 -height 10 -o \"/dev/shm\"\n");
-	printf("Version: %s\n",programversion);
-	printf("Options:\n");
-	printf("\t-i2cbus, path to i2c bus device [Optional, used for battery voltage]\n");
-	printf("\t-i2caddress, i2c device adress, found via 'i2cdetect' [Optional, used for battery voltage]\n");
-	printf("\t-adcvref, in volt, vdd of the adc chip [Optional, used for battery voltage]\n");
-	printf("\t-adcres, ADC resolution: 256=8bits, 1024=10bits, 4096=12bits, 65535=16bits [Optional, used for battery voltage]\n");
-	printf("\t-r1value, in ohm [Optional, used for battery voltage], disable resistor divider if not set\n");
-	printf("\t-r2value, in ohm [Optional, used for battery voltage], disable resistor divider if not set\n");
-	printf("\t-vbatlow, in volt, low battery voltage to set text in red color [Optional, used for battery voltage]\n");
-	printf("\t-vbatlogging, enable battery voltage logging, data will be put in 'vbat-start.log', format 'uptime;vbat' [Optional, used for battery voltage monitoring]\n");
-	printf("\t-width, in px, width of 'fb_footer.png' [Optional, used for generate png]\n");
-	printf("\t-height, in px, height of 'fb_footer.png' [Optional, used for generate png]\n");
-  printf("\t-interval, [Optional] drawing interval in sec\n");
-  printf("\t-ip, [Optional] display IP address instead of link speed\n");
-	printf("\t-o, output folder where 'vbat.log', 'vbat-start.log', 'vbat.srt'  and 'fb_footer.png'\n\n");
+	printf(
+"Version: %s\n"
+"Example with battery: ./info2png -i2cbus \"/dev/i2c-1\" -i2caddress 0x4d -adcvref 3.65 -adcres 4096 -r1value 91 -r2value 220 -vbatlow 3.5 -vbatlogging -width 304 -height 10 -o \"/dev/shm\"\n"
+"Example without battery: ./info2png -width 304 -height 10 -o \"/dev/shm\"\n"
+"Options:\n"
+"\t-i2cbus, path to i2c bus device [Optional, needed only for battery voltage monitoring]\n"
+"\t-i2caddress, i2c device adress, found via 'i2cdetect' [Optional, needed only for battery voltage monitoring]\n"
+"\t-adcvref, in volt, vref of the adc chip [Optional, needed only for battery voltage monitoring]\n"
+"\t-adcres, ADC resolution: 256=8bits, 1024=10bits, 4096=12bits (default), 65535=16bits [Optional, needed only for battery voltage monitoring]\n"
+"\t-r1value, in ohm [Optional, used for battery voltage, disable resistor divider if not set]\n"
+"\t-r2value, in ohm [Optional, used for battery voltage, disable resistor divider if not set]\n"
+"\t-vbatlow, in volt, low battery voltage to set text in red color [Optional, used for battery voltage monitoring]\n"
+"\t-vbatlogging, enable battery voltage logging, data will be put in 'vbat-start.log', format 'uptime;vbat' [Optional, used for battery voltage monitoring]\n"
+"\t-width, in px, width of 'fb_footer.png' [Optional, needed for generate png]\n"
+"\t-height, in px, height of 'fb_footer.png' [Optional, needed for generate png]\n"
+"\t-interval, [Optional] drawing interval in sec\n"
+"\t-ip, [Optional] display IP address instead of link speed\n"
+"\t-o, output folder where 'vbat.log', 'vbat-start.log', 'vbat.srt'  and 'fb_footer.png'\n\n"
+"Resistor divider diagram:\n"
+"\t(Battery) Vin--+\n"
+"\t               R1\n"
+"\t               +-----Vout (ADC)\n"
+"\t               R2\n"
+"\t(Battery) Gnd--+-----Gnd (Avoid if battery power ADC chip)\n"
+,programversion);
 	
-	
-	
-	
-	printf("Resistor divider diagram:\n");
-	printf("\t(Battery) Vin--+\n");
-	printf("\t               R1\n");
-	printf("\t               +-----Vout (ADC)\n");
-	printf("\t               R2\n");
-	printf("\t(Battery) Gnd--+-----Gnd (Avoid if battery power ADC chip)\n");
 }
 
 int main(int argc, char* argv[]){
@@ -156,7 +137,7 @@ int main(int argc, char* argv[]){
 	
 	for(int i=1;i<argc;++i){ //argument to variable
 		if(strcmp(argv[i],"-help")==0){show_usage();return 1;
-		}else if(strcmp(argv[i],"-i2cbus")==0){i2c_bus=(char*)argv[i+1]; if(access(i2c_bus,R_OK)!=0){printf("info2png : Failed, %s not readable\n",i2c_bus);battery_enabled=false;}
+		}else if(strcmp(argv[i],"-i2cbus")==0){i2c_bus=(char*)argv[i+1]; if(access(i2c_bus,R_OK)!=0){printf("info2png : Failed, %s not readable\n",i2c_bus);return 1;}
 		}else if(strcmp(argv[i],"-i2caddress")==0){sscanf(argv[i+1], "%x", &i2c_address);/*htoi(argv[i+1])*/;
 		}else if(strcmp(argv[i],"-adcvref")==0){adc_vref=atof(argv[i+1]);
 		}else if(strcmp(argv[i],"-adcres")==0){adc_resolution=atoi(argv[i+1]);
@@ -166,109 +147,103 @@ int main(int argc, char* argv[]){
 		}else if(strcmp(argv[i],"-vbatlogging")==0){battery_log_enabled=true;
 		}else if(strcmp(argv[i],"-width")==0){gd_image_w=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-height")==0){gd_image_h=atoi(argv[i+1]);
-		}else if(strcmp(argv[i],"-interval")==0){draw_interval=atoi(argv[i+1]);
+		}else if(strcmp(argv[i],"-interval")==0){update_interval=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-ip")==0){wifi_showip=true;
-		}else if(strcmp(argv[i],"-o")==0){vbat_output_path=(char*)argv[i+1]; if(access(vbat_output_path,W_OK)!=0){printf("info2png : Failed, %s not writable\n",vbat_output_path);return 1;}}
+		}else if(strcmp(argv[i],"-o")==0){data_output_path=(char*)argv[i+1]; if(access(data_output_path,W_OK)!=0){printf("info2png : Failed, %s not writable\n",data_output_path);return 1;}}
 	}
-/*
-	if(i2c_address<=0||adc_vref<=0||adc_resolution<=0||divider_r1<=0||divider_r2<=0){battery_enabled=false;battery_log_enabled=false;printf("info2png : Warning, some arguments needed to get battery data are not set, battery monitoring disable\n");} //user miss some arguments for battery
-	if(i2c_address>0||adc_vref>0||adc_resolution>0||divider_r1>0||divider_r2>0){battery_set=true;} //all informations are set for battery probe, use in case of read failure to retry
-	*/
 	
-	if(i2c_address<=0||adc_vref<=0||adc_resolution<=0||divider_r1<0||divider_r2<0){battery_enabled=false;battery_log_enabled=false;printf("info2png : Warning, some arguments needed to get battery data are not set, battery monitoring disable\n");} //user miss some arguments for battery
-	if(i2c_address>0||adc_vref>0||adc_resolution>0){battery_set=true;} //all informations are set for battery probe, use in case of read failure to retry
-	if(divider_r1==0||divider_r2==0){resistor_divider_enabled=false;printf("info2png : Warning, resistor values are not set, resistor divider compute disable\n");} //user miss some arguments for resistor values
+	if(i2c_address<=0||adc_vref<=0||adc_resolution<=0||i2c_bus==NULL){ //user miss some arguments for battery
+		battery_enabled=false; battery_log_enabled=false; printf("info2png : Warning, battery monitoring disable, some arguments needed to get battery data are not set.\n");
+	}else{battery_set=true;} //all informations are set for battery probe, use in case of read failure to retry
+
+	if((divider_r1==0||divider_r2==0)&&battery_set){resistor_divider_enabled=false;printf("info2png : Warning, ADC resistor divider compute disable, resistor values are not set.\n");} //user miss some arguments for resistor values
 	
+	if(data_output_path==NULL){printf("info2png : Failed, missing output path\n");show_usage();return 1;} //user miss some needed arguments
+	if(gd_image_w<1||gd_image_h<1){printf("info2png : Warning, PNG output disable, missing image width or height.\n");png_enabled=false;} //no png output
+	if(vbatlow_value<0&&battery_enabled&&png_enabled){printf("info2png : Warning, low battery voltage not set, text color will stay unchanged\n");} //user miss some arguments for battery
 	
-	
-	if(vbatlow_value<0){printf("info2png : Warning, low battery voltage not set, text color will stay unchanged\n");} //user miss some arguments for battery
-	
-	if(vbat_output_path==NULL){printf("info2png : Failed, missing output path\n");show_usage();return 1;} //user miss some needed arguments
-	if(gd_image_w<1){printf("info2png : Warning, missing image width, png output disable\n");png_enabled=false;} //no png output
-	if(gd_image_h<1){printf("info2png : Warning, missing image height, png output disable\n");png_enabled=false;} //no png output
-		
-		
-	if(draw_interval<1){printf("info2png : Warning, wrong draw interval set, setting it to 15sec\n");draw_interval=15;} //wrong interval
-	if(battery_log_enabled&&battery_enabled){printf("info2png : Battery logging enable\n");}
+	if(update_interval<1){printf("info2png : Warning, wrong update interval set, setting it to 15sec\n");update_interval=15;} //wrong interval
+	if(battery_log_enabled&&battery_set){printf("info2png : Battery logging enable\n");}
 	
 	if(access("/sbin/iw",F_OK)!=0){printf("info2png : Warning, WIFI link speed detection require 'iw' software\n");}
 	
 	
 	
 	
+	
+	
 	while(true){
-		//timestamp_t t0 = get_timestamp(); //benchmark
+		chdir(data_output_path);							//change directory to output path
 		
-		chdir(vbat_output_path); //change directory
-		now = time(0); 						//current date/time
-		ltime = localtime(&now); 			//localtime object
-		
-		if(battery_enabled||(!battery_enabled&&battery_set)){
-			battery_enabled=true; //retry
-			//-----------------------------Start of I2C part
-			if((i2c_handle=open(i2c_bus,O_RDWR))<0){printf("info2png : Failed to open the i2c bus : %s\n",i2c_bus);battery_enabled=false;}else{							//open i2c bus
-				if(ioctl(i2c_handle,I2C_SLAVE,i2c_address)<0){printf("info2png : Failed to get bus access : %04x\n",i2c_address);battery_enabled=false;}else{	//access i2c device
-					if(read(i2c_handle,i2c_buffer,2)!=2){printf("info2png : Failed to read data from the i2c bus\n");battery_enabled=false;;											//start reading data from i2c device
-					}else{
-						adc_value=(i2c_buffer[0]<<8)|(i2c_buffer[1]&0xff);																																							//combine buffer bytes into integer
-						if(resistor_divider_enabled){vbat_tmp_value=adc_value*(float)(adc_vref/adc_resolution)/(float)(divider_r2/(float)(divider_r1+divider_r2));		//compute battery voltage with resistor divider
-						}else{vbat_tmp_value=adc_value*(float)(adc_vref/adc_resolution);}																																							//compute battery voltage only with adc vref
-						if(vbat_tmp_value<1){printf("info2png : Warning, voltage < 1 volt, Probing failed\n");}else{vbat_value=vbat_tmp_value;}										//security
-						
-						temp_filehandle = fopen("vbat.log","wb"); 																																											//open log file
-						fprintf(temp_filehandle,"%.2f",vbat_value);																																											//write log
-						fclose(temp_filehandle);																																																				//close log file
-						if(battery_log_enabled&&vbat_value>1){
-							temp_filehandle = fopen("/proc/uptime","r");																																									//open sys file
-							fscanf(temp_filehandle,"%u",&uptime_value);																																										//read uptime value
-							fclose(temp_filehandle);																																																			//close sys file
-							
-							temp_filehandle = fopen("vbat-start.log","a+");																																								//open log file
-							fprintf(temp_filehandle,"%u;%.2f\n",uptime_value,vbat_value);																																	//write log
-							fclose(temp_filehandle);																																																			//close log file
+		//-----------------------------Start of I2C part
+		if(battery_set){ //all need for battery monitoring is set
+			adc_read_retry=0; vbat_value=0; //reset variables
+			battery_enabled=false; //battery not enable by default
+			while(adc_read_retry<3){ //use a loop in case of reading failure
+				if((i2c_handle=open(i2c_bus,O_RDWR))<0){ //open i2c bus
+					printf("info2png : Failed to open the I2C bus : %s\n",i2c_bus);
+					adc_read_retry=3; //no need to retry since failed to open I2C bus itself
+				}else{
+					if(ioctl(i2c_handle,I2C_SLAVE,i2c_address)<0){ //access i2c device, allow retry if failed
+						printf("info2png : Failed to access I2C device : %04x, retry in 1sec\n",i2c_address);
+					}else{ //success
+						if(read(i2c_handle,i2c_buffer,2)!=2){ //start reading data from i2c device, allow retry if failed
+							printf("info2png : Failed to read data from I2C device : %04x, retry in 1sec\n",i2c_address);
+						}else{ //success
+							adc_raw_value=(i2c_buffer[0]<<8)|(i2c_buffer[1]&0xff); //combine buffer bytes into integer
+							if(resistor_divider_enabled){vbat_value=adc_raw_value*(float)(adc_vref/adc_resolution)/(float)(divider_r2/(float)(divider_r1+divider_r2)); //compute battery voltage with resistor divider
+							}else{vbat_value=adc_raw_value*(float)(adc_vref/adc_resolution);} //compute battery voltage only with adc vref
+							if(vbat_value<1){printf("info2png : Warning, voltage read from ADC chip < 1 volt, Probing failed\n");
+							}else{ //success
+								battery_enabled=true; //battery voltage read success
+								temp_filehandle=fopen("vbat.log","wb"); fprintf(temp_filehandle,"%.2f",vbat_value); fclose(temp_filehandle); //write log file
+								
+								if(battery_log_enabled){ //cumulative cumulative log file
+									temp_filehandle=fopen("/proc/uptime","r"); fscanf(temp_filehandle,"%u",&uptime_value); fclose(temp_filehandle); //get system uptime
+									temp_filehandle=fopen("vbat-start.log","a+"); fprintf(temp_filehandle,"%u;%.2f\n",uptime_value,vbat_value); fclose(temp_filehandle); //write cumulative log file
+								}
+							}
 						}
 					}
 				}
+				
+				if(!battery_enabled){
+					adc_read_retry++; //something failed at one point so retry
+					if(adc_read_retry>2){printf("info2png : Warning, voltage read from ADC chip fail 3 times, skipping until next update\n");}else{sleep(1);}
+				}else{adc_read_retry=3;} //data read with success, no retry
 			}
 		}
-		
-		
+
 		//-----------------------------Start of GD part
 		if(png_enabled){ //png output enable
-			//Check if WIFI is working
-			if(access("/sbin/iw",F_OK)!=-1 && !wifi_showip){ 																																					//check if 'iw' is installed
-				temp_filehandle = popen("iw dev wlan0 link 2> /dev/null | grep bitrate | cut -f 2 -d \":\" | cut -f 1 -d \"M\"", "r");	//open process pipe
-				if(temp_filehandle!=NULL){																																															//if process not fail
-					if(fgets(pbuffer,9,temp_filehandle)){																																									//if output something
-			  		wifi_linkspeed=atoi(pbuffer);																																												//convert output to int
-			  		if(wifi_linkspeed>0){																																						//if value can be valid
-			  			wifi_enabled=true;
-			  			gd_wifi_charcount=sprintf(gd_wifi_chararray,"%iMBit/s",wifi_linkspeed);
-			  		}
+			if(access("/sbin/iw",F_OK)!=-1 && !wifi_showip){ //check if 'iw' is installed for WiFi link speed
+				temp_filehandle=popen("iw dev wlan0 link 2> /dev/null | grep bitrate | cut -f 2 -d \":\" | cut -f 1 -d \"M\"", "r"); //open process pipe
+				if(temp_filehandle!=NULL){ //if process not fail
+					if(fgets(pbuffer,9,temp_filehandle)){ //if output something
+			  		wifi_linkspeed=atoi(pbuffer); //convert output to int
+			  		if(wifi_linkspeed>0){wifi_enabled=true; gd_wifi_charcount=sprintf(gd_wifi_chararray,"%iMBit/s",wifi_linkspeed);} //if value can be valid
 			  	}
-			  	pclose(temp_filehandle);																																															//close process pipe
+			  	pclose(temp_filehandle); //close process pipe
 				}
-			}else{wifi_showip=true;} //'iw' is not installed, show ip address instead
-			
-			if(wifi_showip){
-				temp_filehandle = popen("hostname -I | awk '{printf \"%s\",$1}'", "r");	//open process pipe
-				if(temp_filehandle!=NULL){																																															//if process not fail
-					if(fgets(pbuffer,sizeof(gd_wifi_chararray),temp_filehandle)){																													//if output something
+			}else{ //'iw' is not installed, show ip address instead
+				temp_filehandle=popen("hostname -I | awk '{printf \"%s\",$1}'", "r");	//open process pipe
+				if(temp_filehandle!=NULL){ //if process not fail
+					if(fgets(pbuffer,sizeof(gd_wifi_chararray),temp_filehandle)){ //if output something
 						gd_wifi_charcount=sprintf(gd_wifi_chararray,"%s",pbuffer);
-			  		if(strcmp(gd_wifi_chararray,"127.0.0.1")==0){wifi_showip=false;}																											//if ip is 127.0.0.1, disable
+			  		if(strcmp(gd_wifi_chararray,"127.0.0.1")==0){wifi_showip=false;} //if ip is 127.0.0.1, disable
 			  	}
-			  	pclose(temp_filehandle);																																															//close process pipe
+			  	pclose(temp_filehandle); //close process pipe
 				}
 			}
 			
-			gd_image = gdImageCreateTrueColor(gd_image_w,gd_image_h);																														//allocate gd image
+			gd_image=gdImageCreateTrueColor(gd_image_w,gd_image_h);																														//allocate gd image
 			
-			gd_col_black = gdImageColorAllocate(gd_image, 0, 0, 0);																															//since it is the first color declared, it will be the background
-			gd_col_white = gdImageColorAllocate(gd_image, 255, 255, 255);																												//declarate white color
-			gd_col_gray = gdImageColorAllocate(gd_image, 128, 128, 128);																												//declarate gray color
-			gd_col_darkgray = gdImageColorAllocate(gd_image, 64, 64, 64);																												//declarate dark gray color
-			gd_col_darkergray = gdImageColorAllocate(gd_image, 40, 40, 40);																											//declarate darker gray color
-			gd_col_green = gdImageColorAllocate(gd_image, 0, 255, 0);																														//declarate green color
+			gd_col_black=gdImageColorAllocate(gd_image, 0, 0, 0);																															//since it is the first color declared, it will be the background
+			gd_col_white=gdImageColorAllocate(gd_image, 255, 255, 255);																												//declarate white color
+			gd_col_gray=gdImageColorAllocate(gd_image, 128, 128, 128);																												//declarate gray color
+			gd_col_darkgray=gdImageColorAllocate(gd_image, 64, 64, 64);																												//declarate dark gray color
+			gd_col_darkergray=gdImageColorAllocate(gd_image, 40, 40, 40);																											//declarate darker gray color
+			gd_col_green=gdImageColorAllocate(gd_image, 0, 255, 0);																														//declarate green color
 			
 			
 			for(int i=-gd_image_h;i<gd_image_w;i+=6){gdImageLine(gd_image,i,0,i+gd_image_h,gd_image_h,gd_col_darkergray);}				//background decoration
@@ -291,21 +266,21 @@ int main(int argc, char* argv[]){
 			}else{gd_x_cputemp=gd_char_w/2;}																																//gd x position for cpu temp if not battery probe
 			
 			//cpu temp char array
-			temp_filehandle = fopen("/sys/class/thermal/thermal_zone0/temp","r"); 																									//open sys file
+			temp_filehandle=fopen("/sys/class/thermal/thermal_zone0/temp","r"); 																									//open sys file
 			fgets(cpu_buf, sizeof(cpu_buf),temp_filehandle);																																				//read value
 			fclose(temp_filehandle);																																																//close sys file
 			cpu_value=atoi(cpu_buf)/1000;																																														//compute temperature
 			gd_cpu_charcount=sprintf(gd_cpu_chararray,"CPU:%i°c",cpu_value); 																							//prepare char array to render
 			
 			//cpu load char array - code from https://stackoverflow.com/questions/3769405/determining-cpu-utilization
-		  temp_filehandle = fopen("/proc/stat","r");
+		  temp_filehandle=fopen("/proc/stat","r");
 		  fscanf(temp_filehandle,"%*s %Lf %Lf %Lf %Lf",&a[0],&a[1],&a[2],&a[3]);
 		  fclose(temp_filehandle);
 		  sleep(1);
-		  temp_filehandle = fopen("/proc/stat","r");
+		  temp_filehandle=fopen("/proc/stat","r");
 		  fscanf(temp_filehandle,"%*s %Lf %Lf %Lf %Lf",&b[0],&b[1],&b[2],&b[3]);
 		  fclose(temp_filehandle);
-		  cpuload_value = (((b[0]+b[1]+b[2]) - (a[0]+a[1]+a[2])) / ((b[0]+b[1]+b[2]+b[3]) - (a[0]+a[1]+a[2]+a[3])))*100;
+		  cpuload_value=(((b[0]+b[1]+b[2]) - (a[0]+a[1]+a[2])) / ((b[0]+b[1]+b[2]+b[3]) - (a[0]+a[1]+a[2]+a[3])))*100;
 			gd_cpuload_charcount=sprintf(gd_cpuload_chararray,"%3i%%",cpuload_value); 																			//prepare char array to render
 			
 			//cpu temp render
@@ -325,6 +300,7 @@ int main(int argc, char* argv[]){
 			gdImageLine(gd_image,gd_x_temp+1+gd_string_padding/2,1,gd_x_temp+1+gd_string_padding/2,gd_image_h-2,gd_col_darkgray); 	//draw separator
 			
 			//time render
+			now=time(0); ltime=localtime(&now);		//current date/time, localtime object
 			gd_time_charcount=sprintf(gd_time_chararray,"%02i:%02i",ltime->tm_hour,ltime->tm_min); 												//prepare char array to render
 			gd_x_time=gd_image_w-gd_char_w/2-gd_time_charcount*(gd_char_w+1);										//gd x position for time
 			gdImageLine(gd_image,gd_x_time-1-gd_string_padding/2,1,gd_x_time-1-gd_string_padding/2,gd_image_h-2,gd_col_darkgray); 				//draw separator
@@ -340,22 +316,16 @@ int main(int argc, char* argv[]){
 				gdImageLine(gd_image,gd_x_temp+1+gd_string_padding/2,(gd_image_h/2)-1,gd_x_time-1-gd_string_padding/2,(gd_image_h/2)-1,gd_col_darkgray); //filler
 			}
 			
-			
 			gdImageLine(gd_image,0,gd_image_h-1,gd_image_w,gd_image_h-1,gd_col_gray); 				//bottom decoration
 			
-			temp_filehandle = fopen("fb_footer.png","wb"); 																																					//open image file
+			temp_filehandle=fopen("fb_footer.png","wb"); 																																					//open image file
 			gdImagePng(gd_image,temp_filehandle);																																										//output gd image to file
 			fclose(temp_filehandle);																																																//close image file
 			gdImageDestroy(gd_image);																																																//free gd image memory
 		}
 		
-		sleep(draw_interval); //sleep
+		sleep(update_interval); //sleep
 	}
 	
-/*//benchmark
-timestamp_t t1 = get_timestamp();
-	double secs = (t1 - t0) / 1000000.0L;
-	printf("%g\n",secs);
-*/
 	return 0;
 }
