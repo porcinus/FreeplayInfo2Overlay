@@ -18,7 +18,7 @@ info2png:
 - 0.1c : Removed srt subtitle implement, Various bugfix.
 - 0.1d : Code cleanup, can show ip address instead of link speed using -ip, background no more flat.
 - 0.1e : Allow user not to use resistor divider for battery monitoring.
-- 0.1f : Battery monitoring rework to allow retry on failure, arguments combination rework as well.
+- 0.1f : Battery monitoring rework to allow retry on failure, arguments combination rework as well, RGB-HSL implement.
 
 png2fb16 (deprecated):
 - 0.1a : Initial release.
