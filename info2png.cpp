@@ -17,6 +17,8 @@ const char programversion[]="0.1f"; //program version
 #include <ctime>						//time and date
 #include <locale.h>					//locale
 #include <limits.h>					//limits
+#include <math.h>						//math
+
 
 int nns_map(float x,float in_min,float in_max,int out_min,int out_max){
   if(x<in_min){return out_min;}
@@ -24,11 +26,64 @@ int nns_map(float x,float in_min,float in_max,int out_min,int out_max){
   return (x-in_min)*(out_max-out_min)/(in_max-in_min)+out_min;
 }
 
+float nns_map_float(float x,float in_min,float in_max,float out_min,float out_max){
+  if(x<in_min){return out_min;}
+  if(x>in_max){return out_max;}
+  return (x-in_min)*(out_max-out_min)/(in_max-in_min)+out_min;
+}
+
+//convert from https://axonflux.com/handy-rgb-to-hsl-and-rgb-to-hsv-color-model-c
+void rgb2hsl(int rgb,float *hue,float *saturation,float *lightness){
+	float red=(rgb>>16)&0x0FF, green=(rgb>>8)&0x0FF, blue=(rgb)&0x0FF; //separate rgb channel
+	*hue=0; *saturation=0; *lightness=0; //reset hsl value
+	red/=255; green/=255; blue/=255; //convert rgb to 0-1 range
+	float min=fminf(red,fminf(green,blue)); float max=fmaxf(red,fmaxf(green,blue)); //found min and max rgb value
+	*lightness=(max+min)/2; //found lightness
+	if(max!=min){ //not achromatic
+		float diff=max-min; //compute diff
+		*saturation=*lightness>0.5 ? diff/(2-max-min) : diff/(max+min); //compute saturation
+		if(red>green && red>blue){*hue=(green-blue)/diff+(green<blue ? 6 : 0); //compute hue
+		}else if(green>blue){*hue=(blue-red)/diff+2; //compute hue
+		}else{*hue=(red-green)/diff+4;} //compute hue
+		*hue/=6;
+	}
+}
+
+float hue2rgb(float p, float q, float t){
+	if(t<0){t+=1;}
+	if(t>1){t-=1;}
+	if(6*t<1){return p+(q-p)*6*t;}
+	if(2*t<1){return q;}
+	if(3*t<2){return p+(q-p)*(2.f/3.f-t)*6;}
+	return p;
+}
+
+int hsl2rgb(float hue,float saturation,float lightness){
+	float red=0, green=0, blue=0; //initial rgb channel
+	if(saturation==0){red=green=blue=lightness; //achromatic
+	}else{
+		float q=lightness<0.5 ? lightness*(lightness+saturation) : lightness+saturation-(lightness*saturation);
+		float p=2*lightness-q;
+		red=255*hue2rgb(p,q,hue+1.f/3);
+		green=255*hue2rgb(p,q,hue);
+		blue=255*hue2rgb(p,q,hue-1.f/3);
+	}
+	return (((int)(red)&0x0ff)<<16)|(((int)(green)&0x0ff)<<8)|((int)(blue)&0x0ff);
+}
+
 int rgbcolorstep(float x,float in_min,float in_max,int color_min,int color_max){
-	char color_final_r=nns_map(x,in_min,in_max,(color_min>>16)&0x0FF,(color_max>>16)&0x0FF);
-	char color_final_g=nns_map(x,in_min,in_max,(color_min>>8)&0x0FF,(color_max>>8)&0x0FF);
-	char color_final_b=nns_map(x,in_min,in_max,(color_min>>0)&0x0FF,(color_max>>0)&0x0FF);
-	return ((color_final_r&0x0ff)<<16)|((color_final_g&0x0ff)<<8)|(color_final_b&0x0ff);
+	float h_min=0,s_min=0,l_min=0,h_max=0,s_max=0,l_max=0; //hsl variables for min and max colors
+	rgb2hsl(color_min,&h_min,&s_min,&l_min); //convert color_min rgb to hsl
+	rgb2hsl(color_max,&h_max,&s_max,&l_max); //convert color_max rgb to hsl
+	h_min=nns_map_float(x,in_min,in_max,h_min,h_max); //compute hue median
+	s_min=nns_map_float(x,in_min,in_max,s_min,s_max); //compute saturation median
+	l_min=nns_map_float(x,in_min,in_max,l_min,l_max); //compute lightness median
+	return hsl2rgb(h_min,s_min,l_min); //convert back to rgb
+	
+	//char color_final_r=nns_map(x,in_min,in_max,(color_min>>16)&0x0FF,(color_max>>16)&0x0FF);
+	//char color_final_g=nns_map(x,in_min,in_max,(color_min>>8)&0x0FF,(color_max>>8)&0x0FF);
+	//char color_final_b=nns_map(x,in_min,in_max,(color_min>>0)&0x0FF,(color_max>>0)&0x0FF);
+	//return ((color_final_r&0x0ff)<<16)|((color_final_g&0x0ff)<<8)|(color_final_b&0x0ff);
 }
 
 
@@ -317,6 +372,13 @@ int main(int argc, char* argv[]){
 			}
 			
 			gdImageLine(gd_image,0,gd_image_h-1,gd_image_w,gd_image_h-1,gd_col_gray); 				//bottom decoration
+			
+			/* rgb-hsl debug
+			for(int i=-gd_image_h;i<gd_image_w;i++){
+				gd_col_tmp=rgbcolorstep(i,0,gd_image_w,(int)0x00ff0000,(int)0x00ff0001);
+				gdImageLine(gd_image,i,0,i,gd_image_h,gd_col_tmp);
+			}
+			*/
 			
 			temp_filehandle=fopen("fb_footer.png","wb"); 																																					//open image file
 			gdImagePng(gd_image,temp_filehandle);																																										//output gd image to file
