@@ -64,13 +64,15 @@ rm /lib/systemd/system/[WANTEDSERVICE].service
 # Plot using GNUplot
 If you are interrested by plotting battery to a png file, vbat-plot.sh is provided as a example.
 To add this as a item in Retropie menu in EmulationStation:
- - Create a file named "vbatgraph.sh" with follow contain :
-  sudo /PATH WHERE YOU CLONED THIS GIT/vbat-plot.sh
-  sudo fbi -1 -t "10" -noverbose -a "/dev/shm/vbat-plot.png" </dev/tty &>/dev/null
+ - Create a file named "vbatgraph.sh" with following contain :
+ 
+```sudo /[PATH WHERE YOU CLONED THIS GIT]/vbat-plot.sh```
+
+```sudo fbi -1 -t "10" -noverbose -a "/dev/shm/vbat-plot.png" </dev/tty &>/dev/null```
 
  - Temporary disable gamelist update in EmulationStation setting.
  - Edit "/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml" and add before "</gameList>":
-  	<game><path>./vbatgraph.sh</path><name>.Battery Graph</name></game>
+```<game><path>./vbatgraph.sh</path><name>Battery Graph</name></game>```
 
  - Restart EmulationStation.
  - At this point you shoul be able to see the new item in Retropie menu.
