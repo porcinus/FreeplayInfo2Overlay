@@ -260,6 +260,7 @@ int main(int argc, char* argv[]){
 							}
 						}
 					}
+					close(i2c_handle);
 				}
 				
 				if(!battery_enabled){
@@ -271,12 +272,15 @@ int main(int argc, char* argv[]){
 
 		//-----------------------------Start of GD part
 		if(png_enabled){ //png output enable
+			wifi_enabled=false;
 			if(access("/sbin/iw",F_OK)!=-1 && !wifi_showip){ //check if 'iw' is installed for WiFi link speed
 				temp_filehandle=popen("iw dev wlan0 link 2> /dev/null | grep bitrate | cut -f 2 -d \":\" | cut -f 1 -d \"M\"", "r"); //open process pipe
 				if(temp_filehandle!=NULL){ //if process not fail
 					if(fgets(pbuffer,9,temp_filehandle)){ //if output something
-			  		wifi_linkspeed=atoi(pbuffer); //convert output to int
-			  		if(wifi_linkspeed>0){wifi_enabled=true; gd_wifi_charcount=sprintf(gd_wifi_chararray,"%iMBit/s",wifi_linkspeed);} //if value can be valid
+						if(strlen(pbuffer)>0){ //no output, no connection
+				  		wifi_linkspeed=atoi(pbuffer); //convert output to int
+				  		if(wifi_linkspeed>0){wifi_enabled=true; gd_wifi_charcount=sprintf(gd_wifi_chararray,"%iMBit/s",wifi_linkspeed);} //if value can be valid
+			  		}
 			  	}
 			  	pclose(temp_filehandle); //close process pipe
 				}
