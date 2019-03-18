@@ -27,4 +27,4 @@ set timefmt '%s'
 
 
 set output '/dev/shm/vbat-plot.png'
-plot '/dev/shm/vbat-start.log' using 1:2 smooth acsplines ls 1 notitle
+plot '/dev/shm/vbat-start.log' using 1:2 smooth bezier ls 1 notitle
