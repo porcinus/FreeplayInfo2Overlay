@@ -251,11 +251,11 @@ int main(int argc, char* argv[]){
 							if(vbat_value<1){printf("info2png : Warning, voltage read from ADC chip < 1 volt, Probing failed\n");
 							}else{ //success
 								battery_enabled=true; //battery voltage read success
-								temp_filehandle=fopen("vbat.log","wb"); fprintf(temp_filehandle,"%.2f",vbat_value); fclose(temp_filehandle); //write log file
+								temp_filehandle=fopen("vbat.log","wb"); fprintf(temp_filehandle,"%.3f",vbat_value); fclose(temp_filehandle); //write log file
 								
 								if(battery_log_enabled){ //cumulative cumulative log file
 									temp_filehandle=fopen("/proc/uptime","r"); fscanf(temp_filehandle,"%u",&uptime_value); fclose(temp_filehandle); //get system uptime
-									temp_filehandle=fopen("vbat-start.log","a+"); fprintf(temp_filehandle,"%u;%.2f\n",uptime_value,vbat_value); fclose(temp_filehandle); //write cumulative log file
+									temp_filehandle=fopen("vbat-start.log","a+"); fprintf(temp_filehandle,"%u;%.3f\n",uptime_value,vbat_value); fclose(temp_filehandle); //write cumulative log file
 								}
 							}
 						}
