@@ -3,7 +3,7 @@ NNS @ 2018
 info2png
 It create a PNG/log file contening CPU load and temperature, Wifi link speed and time, Battery voltage is optional.
 */
-const char programversion[]="0.1f"; //program version
+const char programversion[]="0.1g"; //program version
 
 
 #include "gd.h"							//libgd
@@ -19,6 +19,16 @@ const char programversion[]="0.1f"; //program version
 #include <limits.h>					//limits
 #include <math.h>						//math
 
+#include "battery_cm3.h"		//battery data for the Freeplay CM3 platform
+
+
+
+int nns_get_battery_percentage(int vbat){
+	if(vbat<=battery_percentage[0]){return 0;} //lower than min value, 0%
+	if(vbat>battery_percentage[100]){return 100;} //higher than max value, 100%
+	for(int i=1;i<100;i++){if(vbat>battery_percentage[i-1]&&vbat<=battery_percentage[i]){return i;}} //return the right value
+	return -1; //oups
+}
 
 int nns_map(float x,float in_min,float in_max,int out_min,int out_max){
   if(x<in_min){return out_min;}
@@ -134,7 +144,7 @@ int gd_col_black, gd_col_white, gd_col_gray, gd_col_darkgray, gd_col_darkergray,
 
 int gd_x_temp, gd_x_vbat, gd_x_cputemp, gd_x_cpuload, gd_x_wifi, gd_x_time; //gd x text position
 int gd_wifi_charcount, gd_vbat_charcount, gd_cpu_charcount, gd_cpuload_charcount, gd_time_charcount; //gd text char count
-char gd_vbat_chararray[20];				//battery voltage gd string
+char gd_vbat_chararray[26];				//battery voltage gd string
 char gd_cpu_chararray[15];				//cpu gd string
 char gd_cpuload_chararray[10];		//cpu load gd string
 char gd_wifi_chararray[20];				//wifi string
@@ -153,7 +163,7 @@ tm *ltime; 												//localtime object
 //Battery variables
 float vbat_value=0.;					//battery voltage, used as backup if read fail
 float vbatlow_value=-1;				//battery low voltage
-
+int battery_percent=-1;				//battery percentage
 
 
 
@@ -309,8 +319,9 @@ int main(int argc, char* argv[]){
 			
 			//battery voltage char array
 			if(battery_enabled){
-				gd_vbat_charcount=sprintf(gd_vbat_chararray,"Battery:%.2fv",vbat_value);																			//prepare char array to render
-				gd_x_vbat=gd_char_w/2;																																				//gd x position for battery voltage
+				battery_percent=nns_get_battery_percentage((int)(vbat_value*1000));																				//try to get battery percentage
+				gd_vbat_charcount=sprintf(gd_vbat_chararray,"Battery: %d%% (%.2fv)",battery_percent,vbat_value);																	//prepare char array to render
+				gd_x_vbat=gd_char_w/2;																																										//gd x position for battery voltage
 				gd_x_cputemp=gd_x_vbat+gd_string_padding+gd_vbat_charcount*(gd_char_w+1);																	//gd x position for cpu temp
 				if(vbatlow_value<0){ 																																																	//low battery voltage not set
 					gd_col_text=gd_col_green; 																																														//allocate gd color (green)
@@ -350,7 +361,7 @@ int main(int argc, char* argv[]){
 			gdImageString(gd_image,gdFontTiny,gd_x_cputemp,1,(unsigned char*)gd_cpu_chararray,gd_col_text);													//print cpu temp to gd image
 			gdImageString(gd_image,gdFontTiny,gd_x_cpuload-(gd_char_w+2),1,(unsigned char*)"/",gd_col_gray);												//print cpu separator to gd image
 			
-			//battery voltage render
+			//cpu load render
 			gd_col_tmp=rgbcolorstep(cpuload_value,25,100,(int)0x0000ff00,(int)0x00ff0000); 																					//compute integer color
 			gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF); 					//allocate gd color
 			if(cpuload_value<100&&cpuload_value>=10){gdImageString(gd_image,gdFontTiny,gd_x_cpuload,1,(unsigned char*)"0",gd_col_gray);	//print cpu load gray 0 padding
