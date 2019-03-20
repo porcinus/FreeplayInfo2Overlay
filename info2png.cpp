@@ -23,7 +23,8 @@ const char programversion[]="0.1g"; //program version
 
 
 
-int nns_get_battery_percentage(int vbat){
+int nns_get_battery_percentage(int vbat,int cpuload){
+	vbat=vbat+(((voltage_drop_per_core*4)/100)*cpuload); //try to predict battery voltage drop
 	if(vbat<=battery_percentage[0]){return 0;} //lower than min value, 0%
 	if(vbat>battery_percentage[100]){return 100;} //higher than max value, 100%
 	for(int i=1;i<100;i++){if(vbat>battery_percentage[i-1]&&vbat<=battery_percentage[i]){return i;}} //return the right value
@@ -317,24 +318,6 @@ int main(int argc, char* argv[]){
 			
 			for(int i=-gd_image_h;i<gd_image_w;i+=6){gdImageLine(gd_image,i,0,i+gd_image_h,gd_image_h,gd_col_darkergray);}				//background decoration
 			
-			//battery voltage char array
-			if(battery_enabled){
-				battery_percent=nns_get_battery_percentage((int)(vbat_value*1000));																				//try to get battery percentage
-				gd_vbat_charcount=sprintf(gd_vbat_chararray,"Battery: %d%% (%.2fv)",battery_percent,vbat_value);																	//prepare char array to render
-				gd_x_vbat=gd_char_w/2;																																										//gd x position for battery voltage
-				gd_x_cputemp=gd_x_vbat+gd_string_padding+gd_vbat_charcount*(gd_char_w+1);																	//gd x position for cpu temp
-				if(vbatlow_value<0){ 																																																	//low battery voltage not set
-					gd_col_text=gd_col_green; 																																														//allocate gd color (green)
-				}else{
-					gd_col_tmp=rgbcolorstep(vbat_value,vbatlow_value,4.2,(int)0x00ff0000,(int)0x0000ff00);																//compute int color
-					gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF);				//allocate gd color
-				}
-				
-				//battery voltage render
-				gdImageString(gd_image,gdFontTiny,gd_x_vbat,1,(unsigned char*)gd_vbat_chararray,gd_col_text);													//print battery info to gd image
-				gdImageLine(gd_image,gd_x_cputemp-1-gd_string_padding/2,1,gd_x_cputemp-1-gd_string_padding/2,gd_image_h-2,gd_col_darkgray); //draw separator
-			}else{gd_x_cputemp=gd_char_w/2;}																																//gd x position for cpu temp if not battery probe
-			
 			//cpu temp char array
 			temp_filehandle=fopen("/sys/class/thermal/thermal_zone0/temp","r"); 																									//open sys file
 			fgets(cpu_buf, sizeof(cpu_buf),temp_filehandle);																																				//read value
@@ -352,6 +335,24 @@ int main(int argc, char* argv[]){
 		  fclose(temp_filehandle);
 		  cpuload_value=(((b[0]+b[1]+b[2]) - (a[0]+a[1]+a[2])) / ((b[0]+b[1]+b[2]+b[3]) - (a[0]+a[1]+a[2]+a[3])))*100;
 			gd_cpuload_charcount=sprintf(gd_cpuload_chararray,"%3i%%",cpuload_value); 																			//prepare char array to render
+			
+			//battery voltage char array
+			if(battery_enabled){
+				battery_percent=nns_get_battery_percentage((int)(vbat_value*1000),cpuload_value);																				//try to get battery percentage
+				gd_vbat_charcount=sprintf(gd_vbat_chararray,"Battery: %d%% (%.2fv)",battery_percent,vbat_value);																	//prepare char array to render
+				gd_x_vbat=gd_char_w/2;																																										//gd x position for battery voltage
+				gd_x_cputemp=gd_x_vbat+gd_string_padding+gd_vbat_charcount*(gd_char_w+1);																	//gd x position for cpu temp
+				if(vbatlow_value<0){ 																																																	//low battery voltage not set
+					gd_col_text=gd_col_green; 																																														//allocate gd color (green)
+				}else{
+					gd_col_tmp=rgbcolorstep(vbat_value,vbatlow_value,4.2,(int)0x00ff0000,(int)0x0000ff00);																//compute int color
+					gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF);				//allocate gd color
+				}
+				
+				//battery voltage render
+				gdImageString(gd_image,gdFontTiny,gd_x_vbat,1,(unsigned char*)gd_vbat_chararray,gd_col_text);													//print battery info to gd image
+				gdImageLine(gd_image,gd_x_cputemp-1-gd_string_padding/2,1,gd_x_cputemp-1-gd_string_padding/2,gd_image_h-2,gd_col_darkgray); //draw separator
+			}else{gd_x_cputemp=gd_char_w/2;}																																//gd x position for cpu temp if not battery probe
 			
 			//cpu temp render
 			gd_x_cpuload=gd_x_cputemp+gd_cpu_charcount*(gd_char_w+1)+(gd_char_w+2);																			//gd x position for cpu load
