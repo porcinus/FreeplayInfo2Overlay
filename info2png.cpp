@@ -24,9 +24,9 @@ const char programversion[]="0.1g"; //program version
 
 
 int nns_get_battery_percentage(int vbat,int cpuload){
-	vbat=vbat+(((voltage_drop_per_core*4)/100)*cpuload); //try to predict battery voltage drop
+	//vbat=vbat+(((voltage_drop_per_core*4)/100)*cpuload); //try to predict battery voltage drop
 	if(vbat<=battery_percentage[0]){return 0;} //lower than min value, 0%
-	if(vbat>battery_percentage[100]){return 100;} //higher than max value, 100%
+	if(vbat>battery_percentage[99]){return 100;} //higher than max value, 100%
 	for(int i=1;i<100;i++){if(vbat>battery_percentage[i-1]&&vbat<=battery_percentage[i]){return i;}} //return the right value
 	return -1; //oups
 }
