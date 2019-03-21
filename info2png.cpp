@@ -23,14 +23,23 @@ const char programversion[]="0.1g"; //program version
 
 
 
-int vbat_smooth_value[5]={4000,4000,4000,4000};	//array to store last smoothed data
-int nns_get_battery_percentage(int vbat/*,int cpuload*/){
-	//vbat=vbat+(((voltage_drop_per_core*4)/100)*cpuload); //try to predict battery voltage drop
-	vbat=(0.1*vbat+0.9*vbat_smooth_value[3]+vbat_smooth_value[2]+vbat_smooth_value[1]+vbat_smooth_value[0])/4; //exponential smoothing + average with last 3 values
+int vbat_smooth_value[5];	//array to store last smoothed data
+bool vbat_smooth_init=false;	//array initialized?
+int vbat_smoothness=3;	//smoothness
+int nns_get_battery_percentage(int vbat){
+	if(!vbat_smooth_init){vbat_smooth_value[0]=vbat_smooth_value[1]=vbat_smooth_value[2]=vbat_smooth_value[3]=vbat;vbat_smooth_init=true;} //initialize array if not already done
+	vbat=0.5*vbat+0.5*vbat_smooth_value[3]; //exponential smoothing
+	for(int i=vbat_smoothness;i>0;i--){vbat=(vbat+vbat_smooth_value[3-i])/2;} //average with last values depending on last battery level (>50% = 4 values, >30% = 3 values, >15% = 2 values)
 	vbat_smooth_value[0]=vbat_smooth_value[1]; vbat_smooth_value[1]=vbat_smooth_value[2]; vbat_smooth_value[2]=vbat_smooth_value[3]; vbat_smooth_value[3]=vbat; //shift array
 	if(vbat<battery_percentage[0]){return 0;} //lower than min value, 0%
 	if(vbat>=battery_percentage[100]){return 99;} //higher than max value, 100%
-	for(int i=0;i<100;i++){if(vbat>=battery_percentage[i]&&vbat<battery_percentage[i+1]){return i;}} //return the right value
+	for(int i=0;i<100;i++){
+		if(vbat>=battery_percentage[i]&&vbat<battery_percentage[i+1]){
+			if(i>50){vbat_smoothness=3;}else if(i>30){vbat_smoothness=2;}else if(i>15){vbat_smoothness=1;}else{vbat_smoothness=0;} //decrease smoothness while battery level is going down
+			return i; //return the value
+		}
+	}
+	
 	return -1; //oups
 }
 
@@ -340,7 +349,7 @@ int main(int argc, char* argv[]){
 			
 			//battery voltage char array
 			if(battery_enabled){
-				battery_percent=nns_get_battery_percentage((int)(vbat_value*1000)/*,cpuload_value*/);																				//try to get battery percentage
+				battery_percent=nns_get_battery_percentage((int)(vbat_value*1000));																				//try to get battery percentage
 				gd_vbat_charcount=sprintf(gd_vbat_chararray,"Battery: %d%% (%.2fv)",battery_percent,vbat_value);																	//prepare char array to render
 				gd_x_vbat=gd_char_w/2;																																										//gd x position for battery voltage
 				gd_x_cputemp=gd_x_vbat+gd_string_padding+gd_vbat_charcount*(gd_char_w+1);																	//gd x position for cpu temp

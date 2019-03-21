@@ -4,12 +4,9 @@ Since the system is powered with a Li-ion battery, the voltage drop at this load
 
 To avoid usage of float or double, battery voltage is multiply by 1000.
 
-Voltage drop per core at 100% : 0.04v
-
 Note: Following data has been smooth to avoid value crossing
 */
 
-//int voltage_drop_per_core=40;
 
 int battery_percentage[102]={
 3088,		//0%
