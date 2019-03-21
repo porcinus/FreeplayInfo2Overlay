@@ -23,11 +23,16 @@ const char programversion[]="0.1g"; //program version
 
 
 
-int nns_get_battery_percentage(int vbat,int cpuload){
+int nns_get_battery_percentage(int vbat/*,int cpuload*/){
 	//vbat=vbat+(((voltage_drop_per_core*4)/100)*cpuload); //try to predict battery voltage drop
-	if(vbat<=battery_percentage[0]){return 0;} //lower than min value, 0%
-	if(vbat>battery_percentage[99]){return 100;} //higher than max value, 100%
-	for(int i=1;i<100;i++){if(vbat>battery_percentage[i-1]&&vbat<=battery_percentage[i]){return i;}} //return the right value
+	
+	if(vbat<battery_percentage[0]){return 0;} //lower than min value, 0%
+	if(vbat>=battery_percentage[100/battery_precision]){return 99;} //higher than max value, 100%
+	for(int i=0;i<100/battery_precision;i++){
+		if(vbat>=battery_percentage[i]&&vbat<battery_percentage[i+1]){
+			return i*battery_precision;
+		}
+	} //return the right value
 	return -1; //oups
 }
 
@@ -338,8 +343,8 @@ int main(int argc, char* argv[]){
 			
 			//battery voltage char array
 			if(battery_enabled){
-				battery_percent=nns_get_battery_percentage((int)(vbat_value*1000),cpuload_value);																				//try to get battery percentage
-				gd_vbat_charcount=sprintf(gd_vbat_chararray,"Battery: %d%% (%.2fv)",battery_percent,vbat_value);																	//prepare char array to render
+				battery_percent=nns_get_battery_percentage((int)(vbat_value*1000)/*,cpuload_value*/);																				//try to get battery percentage
+				gd_vbat_charcount=sprintf(gd_vbat_chararray,"Battery: >%d%% (%.2fv)",battery_percent,vbat_value);																	//prepare char array to render
 				gd_x_vbat=gd_char_w/2;																																										//gd x position for battery voltage
 				gd_x_cputemp=gd_x_vbat+gd_string_padding+gd_vbat_charcount*(gd_char_w+1);																	//gd x position for cpu temp
 				if(vbatlow_value<0){ 																																																	//low battery voltage not set
