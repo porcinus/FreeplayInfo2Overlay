@@ -23,16 +23,14 @@ const char programversion[]="0.1g"; //program version
 
 
 
+int vbat_smooth_value[5]={4000,4000,4000,4000};	//array to store last smoothed data
 int nns_get_battery_percentage(int vbat/*,int cpuload*/){
 	//vbat=vbat+(((voltage_drop_per_core*4)/100)*cpuload); //try to predict battery voltage drop
-	
+	vbat=(0.1*vbat+0.9*vbat_smooth_value[3]+vbat_smooth_value[2]+vbat_smooth_value[1]+vbat_smooth_value[0])/4; //exponential smoothing + average with last 3 values
+	vbat_smooth_value[0]=vbat_smooth_value[1]; vbat_smooth_value[1]=vbat_smooth_value[2]; vbat_smooth_value[2]=vbat_smooth_value[3]; vbat_smooth_value[3]=vbat; //shift array
 	if(vbat<battery_percentage[0]){return 0;} //lower than min value, 0%
-	if(vbat>=battery_percentage[100/battery_precision]){return 99;} //higher than max value, 100%
-	for(int i=0;i<100/battery_precision;i++){
-		if(vbat>=battery_percentage[i]&&vbat<battery_percentage[i+1]){
-			return i*battery_precision;
-		}
-	} //return the right value
+	if(vbat>=battery_percentage[100]){return 99;} //higher than max value, 100%
+	for(int i=0;i<100;i++){if(vbat>=battery_percentage[i]&&vbat<battery_percentage[i+1]){return i;}} //return the right value
 	return -1; //oups
 }
 
@@ -170,7 +168,6 @@ tm *ltime; 												//localtime object
 float vbat_value=0.;					//battery voltage, used as backup if read fail
 float vbatlow_value=-1;				//battery low voltage
 int battery_percent=-1;				//battery percentage
-
 
 
 
