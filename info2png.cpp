@@ -341,7 +341,7 @@ int main(int argc, char* argv[]){
 			//battery voltage char array
 			if(battery_enabled){
 				battery_percent=nns_get_battery_percentage((int)(vbat_value*1000)/*,cpuload_value*/);																				//try to get battery percentage
-				gd_vbat_charcount=sprintf(gd_vbat_chararray,"Battery: >%d%% (%.2fv)",battery_percent,vbat_value);																	//prepare char array to render
+				gd_vbat_charcount=sprintf(gd_vbat_chararray,"Battery: %d%% (%.2fv)",battery_percent,vbat_value);																	//prepare char array to render
 				gd_x_vbat=gd_char_w/2;																																										//gd x position for battery voltage
 				gd_x_cputemp=gd_x_vbat+gd_string_padding+gd_vbat_charcount*(gd_char_w+1);																	//gd x position for cpu temp
 				if(vbatlow_value<0){ 																																																	//low battery voltage not set
