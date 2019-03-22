@@ -96,11 +96,6 @@ int rgbcolorstep(float x,float in_min,float in_max,int color_min,int color_max){
 	s_min=nns_map_float(x,in_min,in_max,s_min,s_max); //compute saturation median
 	l_min=nns_map_float(x,in_min,in_max,l_min,l_max); //compute lightness median
 	return hsl2rgb(h_min,s_min,l_min); //convert back to rgb
-	
-	//char color_final_r=nns_map(x,in_min,in_max,(color_min>>16)&0x0FF,(color_max>>16)&0x0FF);
-	//char color_final_g=nns_map(x,in_min,in_max,(color_min>>8)&0x0FF,(color_max>>8)&0x0FF);
-	//char color_final_b=nns_map(x,in_min,in_max,(color_min>>0)&0x0FF,(color_max>>0)&0x0FF);
-	//return ((color_final_r&0x0ff)<<16)|((color_final_g&0x0ff)<<8)|(color_final_b&0x0ff);
 }
 
 
@@ -373,7 +368,7 @@ int main(int argc, char* argv[]){
 			if(battery_enabled){
 				battery_percent=nns_get_battery_percentage((int)(vbat_value*1000));																				//try to get battery percentage
 				//gd_vbat_charcount=sprintf(gd_vbat_chararray,"Battery: %d%% (%.2fv)",battery_percent,vbat_value);																	//prepare char array to render
-				gd_vbat_charcount=sprintf(gd_vbat_chararray,"%d%% (%.2fv)",battery_percent,vbat_value);																	//prepare char array to render
+				gd_vbat_charcount=sprintf(gd_vbat_chararray,"%d%%/%.2fv",battery_percent,vbat_value);																	//prepare char array to render
 				gd_x_vbat=9+gd_char_w/2;																																										//gd x position for battery voltage
 				gd_x_cputemp=gd_x_vbat+gd_string_padding+gd_vbat_charcount*(gd_char_w+1);																	//gd x position for cpu temp
 				if(vbatlow_value<0){ 																																																	//low battery voltage not set
@@ -386,6 +381,7 @@ int main(int argc, char* argv[]){
 				//battery voltage render
 				gdImageChar(gd_image,gd_icons_8x8_font,gd_x_vbat-9,1,0x00,gd_col_text); //draw battery icon
 				gdImageString(gd_image,gdFontTiny,gd_x_vbat,1,(unsigned char*)gd_vbat_chararray,gd_col_text);													//print battery info to gd image
+				gdImageString(gd_image,gdFontTiny,gd_x_vbat+(gd_vbat_charcount-6)*(gd_char_w+1),1,(unsigned char*)"/",gd_col_gray); //draw battery icon
 				gdImageLine(gd_image,gd_x_cputemp-1-gd_string_padding/2,1,gd_x_cputemp-1-gd_string_padding/2,gd_image_h-2,gd_col_darkgray); //draw separator
 			}else{gd_x_cputemp=gd_char_w/2;}																																//gd x position for cpu temp if not battery probe
 			
@@ -450,18 +446,6 @@ int main(int argc, char* argv[]){
 			}
 			
 			gdImageLine(gd_image,0,gd_image_h-1,gd_image_w,gd_image_h-1,gd_col_gray); 				//bottom decoration
-			
-			
-			
-			
-			/* rgb-hsl debug
-			for(int i=-gd_image_h;i<gd_image_w;i++){
-				gd_col_tmp=rgbcolorstep(i,0,gd_image_w,(int)0x00ff0000,(int)0x00ff0001);
-				gdImageLine(gd_image,i,0,i,gd_image_h,gd_col_tmp);
-			}
-			*/
-			
-			//nns_gd_drawicon(gd_image,gd_icon_battery,1,1,gd_col_white);
 			
 			temp_filehandle=fopen("fb_footer.png","wb"); 																																					//open image file
 			gdImagePng(gd_image,temp_filehandle);																																										//output gd image to file
