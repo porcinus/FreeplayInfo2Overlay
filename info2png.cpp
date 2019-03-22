@@ -31,7 +31,7 @@ int nns_get_battery_percentage(int vbat){
 	vbat=(vbat+vbat_smooth_value[3]+vbat_smooth_value[2]+vbat_smooth_value[1]+vbat_smooth_value[0])/5; //smoothed value
 	vbat_smooth_value[0]=vbat_smooth_value[1]; vbat_smooth_value[1]=vbat_smooth_value[2]; vbat_smooth_value[2]=vbat_smooth_value[3]; vbat_smooth_value[3]=vbat; //shift array
 	if(vbat<battery_percentage[0]){return 0;} //lower than min value, 0%
-	if(vbat>=battery_percentage[100]){return 99;} //higher than max value, 100%
+	if(vbat>=battery_percentage[100]){return 100;} //higher than max value, 100%
 	for(int i=0;i<100;i++){if(vbat>=battery_percentage[i]&&vbat<battery_percentage[i+1]){return i;}} //return the value
 	return -1; //oups
 }
