@@ -4,7 +4,7 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 
 - info2png : Output battery voltage and try to predict it's level if ADC data provided , cpu load and temperature, wifi link speed (if detected) and system time. Depending on arguments passed, can generate a png file, a log containing battery voltage.
 
-- png2fb16 : Copy a png file to a 16 bits framebuffer, to use aside of info2png, deprecated.
+- png2fb16 : Copy a png file to a 16 bits framebuffer, to use aside of info2png, deprecated (will be deleted in the future).
 
 - nns-overlay-deamon : Use to monitor a gpio button input to display overlay, can monitor a gpio pin to alert user of a low battery state, to be used aside of info2png, ONLY work with dispmanx driver.
 
@@ -19,10 +19,10 @@ info2png:
 - 0.1d : Code cleanup, can show ip address instead of link speed using -ip, background no more flat.
 - 0.1e : Allow user not to use resistor divider for battery monitoring.
 - 0.1f : Battery monitoring rework to allow retry on failure, arguments combination rework as well, RGB-HSL implement.
-- 0.1g : Battery percentage prediction (testing stage).
+- 0.1g : Battery percentage prediction.
 - 0.1h : Time display can be disable using -notime, freeplayfbcp.cfg can be set using -freeplaycfg to get width of the TFT screen. Battery, CPU and WiFi text replaced by icons.
 
-png2fb16 (deprecated):
+png2fb16 (deprecated, will be deleted in the future):
 - 0.1a : Initial release.
 - 0.1b : Bugfix.
 
@@ -35,7 +35,7 @@ nns-overlay-deamon:
 - 0.1b : Implement ffmpeg and omxplayer to display overlay.
 - 0.1c : Implement img2dispmanx to avoid use of ffmpeg and omxplayer, added overheat icon.
 - 0.1d : Added low battery icon (gpio input if set using -lowbatpin, plus use -lowbatreverselogic if reversed logic).
-- 0.1e : Adapt program to updated img2dispmanx, No more set width and height.
+- 0.1e : Adapt program to updated img2dispmanx, No more need to set width and height.
 
 # Provided scripts :
 - compile.sh : Compile all cpp files. Require libgd-dev, zlib1g-dev, libfreetype6-dev, libpng-dev, libjpeg-dev.
