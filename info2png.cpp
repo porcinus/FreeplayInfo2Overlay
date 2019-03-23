@@ -28,19 +28,14 @@ int vbat_smooth_value[5];	//array to store last smoothed data
 bool vbat_smooth_init=false;	//array initialized?
 
 int nns_get_battery_percentage(int vbat){
+	int i;
 	if(!vbat_smooth_init){vbat_smooth_value[0]=vbat_smooth_value[1]=vbat_smooth_value[2]=vbat_smooth_value[3]=vbat;vbat_smooth_init=true;} //initialize array if not already done
 	vbat=(vbat+vbat_smooth_value[3]+vbat_smooth_value[2]+vbat_smooth_value[1]+vbat_smooth_value[0])/5; //smoothed value
-	vbat_smooth_value[0]=vbat_smooth_value[1]; vbat_smooth_value[1]=vbat_smooth_value[2]; vbat_smooth_value[2]=vbat_smooth_value[3]; vbat_smooth_value[3]=vbat; //shift array
+	for(i=0;i<3;i++){vbat_smooth_value[i]=vbat_smooth_value[i+1];} vbat_smooth_value[3]=vbat; //shift array
 	if(vbat<battery_percentage[0]){return 0;} //lower than min value, 0%
 	if(vbat>=battery_percentage[100]){return 100;} //higher than max value, 100%
-	for(int i=0;i<100;i++){if(vbat>=battery_percentage[i]&&vbat<battery_percentage[i+1]){return i;}} //return the value
+	for(i=0;i<100;i++){if(vbat>=battery_percentage[i]&&vbat<battery_percentage[i+1]){return i;}} //return the value
 	return -1; //oups
-}
-
-int nns_map(float x,float in_min,float in_max,int out_min,int out_max){
-  if(x<in_min){return out_min;}
-  if(x>in_max){return out_max;}
-  return (x-in_min)*(out_max-out_min)/(in_max-in_min)+out_min;
 }
 
 float nns_map_float(float x,float in_min,float in_max,float out_min,float out_max){
@@ -67,8 +62,7 @@ void rgb2hsl(int rgb,float *hue,float *saturation,float *lightness){
 }
 
 float hue2rgb(float p, float q, float t){
-	if(t<0){t+=1;}
-	if(t>1){t-=1;}
+	if(t<0){t+=1;} if(t>1){t-=1;}
 	if(6*t<1){return p+(q-p)*6*t;}
 	if(2*t<1){return q;}
 	if(3*t<2){return p+(q-p)*(2.f/3.f-t)*6;}
@@ -81,11 +75,11 @@ int hsl2rgb(float hue,float saturation,float lightness){
 	}else{
 		float q=lightness<0.5 ? lightness*(lightness+saturation) : lightness+saturation-(lightness*saturation);
 		float p=2*lightness-q;
-		red=255*hue2rgb(p,q,hue+1.f/3);
-		green=255*hue2rgb(p,q,hue);
-		blue=255*hue2rgb(p,q,hue-1.f/3);
+		red=255*hue2rgb(p,q,hue+1.f/3); //compute red channel
+		green=255*hue2rgb(p,q,hue); //compute green channel
+		blue=255*hue2rgb(p,q,hue-1.f/3); //compute blue channel
 	}
-	return (((int)(red)&0x0ff)<<16)|(((int)(green)&0x0ff)<<8)|((int)(blue)&0x0ff);
+	return (((int)(red)&0x0ff)<<16)|(((int)(green)&0x0ff)<<8)|((int)(blue)&0x0ff); //merge RGB to int
 }
 
 int rgbcolorstep(float x,float in_min,float in_max,int color_min,int color_max){
@@ -141,10 +135,9 @@ int adc_read_retry=0;							//adc reading retry if failure
 gdImagePtr gd_image;								//gd image
 int gd_image_w=-1, gd_image_h=-1;		//gd image size
 const int gd_char_w=5; 							//gd image char width
-const int gd_string_padding=15;			//gd image padding width
 int gd_col_black, gd_col_white, gd_col_gray, gd_col_darkgray, gd_col_darkergray, gd_col_green, gd_col_tmp, gd_col_text; //gd colors
 
-char gd_icons[]={
+char gd_icons[]={ //custom gd font char array
 0,0,1,1,1,1,0,0, //char 0 : battery
 0,1,1,0,0,1,1,0,
 0,1,0,0,0,0,1,0,
@@ -169,8 +162,8 @@ char gd_icons[]={
 0,0,1,0,1,0,1,0,
 0,0,1,0,1,0,1,0,
 0,0,1,0,1,0,1,0};
-gdFont gd_icons_8x8_font_ref = {3,0,8,8,gd_icons};
-gdFontPtr gd_icons_8x8_font = &gd_icons_8x8_font_ref;
+gdFont gd_icons_8x8_font_ref = {3,0,8,8,gd_icons}; //declare custom gd font
+gdFontPtr gd_icons_8x8_font = &gd_icons_8x8_font_ref; //pointer to custom gd font
 
 int gd_x_current,gd_x_last,gd_x_wifi; //gd x text position
 int gd_wifi_charcount,gd_tmp_charcount; //gd text char count
@@ -328,9 +321,6 @@ int main(int argc, char* argv[]){
 		if(png_enabled){ //png output enable
 			wifi_enabled=false;
 			if(access("/sbin/iw",F_OK)!=-1 && !wifi_showip){ //check if 'iw' is installed for WiFi link speed
-				//char cfg_buf[32];											//config read buffer
-				//temp_filehandle=popen("iw dev wlan0 link 2> /dev/null | grep bitrate | cut -f 2 -d \":\" | cut -f 1 -d \"M\"", "r"); //open process pipe
-				
 				temp_filehandle=popen("iw dev wlan0 link 2> /dev/null  | sed 's/^[[:space:]]*//g' | sed 's/ //g'", "r"); //open process pipe
 				if(temp_filehandle!=NULL){ //if process not fail
 					char *ret;
@@ -344,17 +334,6 @@ int main(int argc, char* argv[]){
 					}
 					pclose(temp_filehandle); //close process pipe
 				}
-				
-			/*
-				if(temp_filehandle!=NULL){ //if process not fail
-					if(fgets(pbuffer,9,temp_filehandle)){ //if output something
-						if(strlen(pbuffer)>0){ //no output, no connection
-				  		wifi_linkspeed=atoi(pbuffer); //convert output to int
-				  		if(wifi_linkspeed>0){wifi_enabled=true; gd_wifi_charcount=sprintf(gd_wifi_chararray,"%iMBit/s",wifi_linkspeed);} //if value can be valid
-			  		}
-			  	}
-			  	pclose(temp_filehandle); //close process pipe
-				}*/
 			}else{ //'iw' is not installed, show ip address instead
 				temp_filehandle=popen("hostname -I | awk '{printf \"%s\",$1}'", "r");	//open process pipe
 				if(temp_filehandle!=NULL){ //if process not fail
@@ -455,12 +434,20 @@ int main(int argc, char* argv[]){
 				if(!wifi_showip){ //draw wifi icon with color based on signal 
 					if(vbatlow_value<0){gd_col_text=gd_col_white; //no signal=white
 					}else{
-						gd_col_tmp=rgbcolorstep(wifi_signal,30,91,(int)0x0000ff00,(int)0x00ff0000); //compute integer color
+						gd_col_tmp=rgbcolorstep(wifi_signal,30,91,(int)0x00ff0000,(int)0x0000ff00); //compute integer color
 						gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF); //allocate gd color
 					}
 					gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-9,0,0x02,gd_col_text);
 				}
-				gdImageString(gd_image,gdFontTiny,gd_x_current,1,(unsigned char*)gd_wifi_chararray,gd_col_white); //print wifi link speed
+				
+				if(wifi_linkspeed<1){gd_col_text=gd_col_white; //no link speed=white
+				}else{
+						gd_col_tmp=rgbcolorstep(wifi_linkspeed,5,72,(int)0x00ff0000,(int)0x0000ff00); //compute integer color
+						gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF); //allocate gd color
+				}
+				
+				gdImageString(gd_image,gdFontTiny,gd_x_current,1,(unsigned char*)gd_wifi_chararray,gd_col_text); //print wifi link speed
+				
 				if(!wifi_showip){gd_x_current-=9;} //update x position
 				gdImageLine(gd_image,gd_x_current-gd_char_w,1,gd_x_current-gd_char_w,gd_image_h-2,gd_col_darkgray); //draw separator
 				gd_x_current-=2*gd_char_w-1; //update x position
