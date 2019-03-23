@@ -20,7 +20,7 @@ info2png:
 - 0.1e : Allow user not to use resistor divider for battery monitoring.
 - 0.1f : Battery monitoring rework to allow retry on failure, arguments combination rework as well, RGB-HSL implement.
 - 0.1g : Battery percentage prediction.
-- 0.1h : Time display can be disable using -notime, freeplayfbcp.cfg can be set using -freeplaycfg to get width of the TFT screen. Battery, CPU and WiFi text replaced by icons.
+- 0.1h : Time display can be disable using -notime, freeplayfbcp.cfg can be set using -freeplaycfg to get width of the TFT screen. Battery, CPU and WiFi text replaced by icons. WiFi icon color based on signal strength.
 
 png2fb16 (deprecated, will be deleted in the future):
 - 0.1a : Initial release.
