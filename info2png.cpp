@@ -182,6 +182,7 @@ char cpu_buf[7];									//cpu read buffer
 int cpuload_value=0;							//cpu load
 int uptime_value=0;								//uptime value
 int wifi_linkspeed=0;							//wifi link speed
+int wifi_signal=0;								//wifi signal
 char pbuffer[20];									//buffer use to read process pipe
 time_t now; 											//current date/time
 tm *ltime; 												//localtime object
@@ -327,7 +328,24 @@ int main(int argc, char* argv[]){
 		if(png_enabled){ //png output enable
 			wifi_enabled=false;
 			if(access("/sbin/iw",F_OK)!=-1 && !wifi_showip){ //check if 'iw' is installed for WiFi link speed
-				temp_filehandle=popen("iw dev wlan0 link 2> /dev/null | grep bitrate | cut -f 2 -d \":\" | cut -f 1 -d \"M\"", "r"); //open process pipe
+				//char cfg_buf[32];											//config read buffer
+				//temp_filehandle=popen("iw dev wlan0 link 2> /dev/null | grep bitrate | cut -f 2 -d \":\" | cut -f 1 -d \"M\"", "r"); //open process pipe
+				
+				temp_filehandle=popen("iw dev wlan0 link 2> /dev/null  | sed 's/^[[:space:]]*//g' | sed 's/ //g'", "r"); //open process pipe
+				if(temp_filehandle!=NULL){ //if process not fail
+					char *ret;
+					while(fgets(cfg_buf,sizeof(cfg_buf),temp_filehandle)!=NULL){	//read line
+						if(strstr(cfg_buf,"signal")!=NULL){sscanf(cfg_buf,"%*[^0123456789]%d",&wifi_signal); //signal
+						}else if(strstr(cfg_buf,"bitrate")!=NULL){ //speed
+							wifi_enabled=true;
+							sscanf(cfg_buf,"%*[^0123456789]%d",&wifi_linkspeed);
+							gd_wifi_charcount=sprintf(gd_wifi_chararray,"%iMBit/s",wifi_linkspeed);
+						}
+					}
+					pclose(temp_filehandle); //close process pipe
+				}
+				
+			/*
 				if(temp_filehandle!=NULL){ //if process not fail
 					if(fgets(pbuffer,9,temp_filehandle)){ //if output something
 						if(strlen(pbuffer)>0){ //no output, no connection
@@ -336,7 +354,7 @@ int main(int argc, char* argv[]){
 			  		}
 			  	}
 			  	pclose(temp_filehandle); //close process pipe
-				}
+				}*/
 			}else{ //'iw' is not installed, show ip address instead
 				temp_filehandle=popen("hostname -I | awk '{printf \"%s\",$1}'", "r");	//open process pipe
 				if(temp_filehandle!=NULL){ //if process not fail
@@ -434,7 +452,14 @@ int main(int argc, char* argv[]){
 			
 			if(wifi_enabled||wifi_showip){ //wifi render
 				gd_x_current-=gd_wifi_charcount*gd_char_w; //update x position
-				if(!wifi_showip){gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-9,0,0x02,gd_col_white);} //draw wifi icon
+				if(!wifi_showip){ //draw wifi icon with color based on signal 
+					if(vbatlow_value<0){gd_col_text=gd_col_white; //no signal=white
+					}else{
+						gd_col_tmp=rgbcolorstep(cpuload_value,30,91,(int)0x0000ff00,(int)0x00ff0000); //compute integer color
+						gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF); //allocate gd color
+					}
+					gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-9,0,0x02,gd_col_text);
+				}
 				gdImageString(gd_image,gdFontTiny,gd_x_current,1,(unsigned char*)gd_wifi_chararray,gd_col_white); //print wifi link speed
 				if(!wifi_showip){gd_x_current-=9;} //update x position
 				gdImageLine(gd_image,gd_x_current-gd_char_w,1,gd_x_current-gd_char_w,gd_image_h-2,gd_col_darkgray); //draw separator
