@@ -455,7 +455,7 @@ int main(int argc, char* argv[]){
 				if(!wifi_showip){ //draw wifi icon with color based on signal 
 					if(vbatlow_value<0){gd_col_text=gd_col_white; //no signal=white
 					}else{
-						gd_col_tmp=rgbcolorstep(cpuload_value,30,91,(int)0x0000ff00,(int)0x00ff0000); //compute integer color
+						gd_col_tmp=rgbcolorstep(wifi_signal,30,91,(int)0x0000ff00,(int)0x00ff0000); //compute integer color
 						gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF); //allocate gd color
 					}
 					gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-9,0,0x02,gd_col_text);
