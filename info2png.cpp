@@ -108,6 +108,7 @@ bool png_enabled=true;								//png output boolean
 bool wifi_enabled=false;							//wifi boolean
 bool wifi_showip=false;								//ip address instead of link speed
 bool time_enabled=true;								//display time
+bool uptime_enabled=false;						//display uptime
 char cfg_buf[32];											//config read buffer
 
 
@@ -207,6 +208,7 @@ void show_usage(void){
 "\t-interval, [Optional] drawing interval in sec\n"
 "\t-ip, [Optional] display IP address instead of link speed\n"
 "\t-notime, [Optional] disable display of time\n"
+"\t-uptime, [Optional] system uptime instead of time\n"
 "\t-freeplaycfg, [Optional] usually \"/boot/freeplayfbcp.cfg\", provide data like screen width\n"
 "\t-o, output folder where 'vbat.log', 'vbat-start.log', 'vbat.srt'  and 'fb_footer.png'\n\n"
 "Resistor divider diagram:\n"
@@ -237,6 +239,7 @@ int main(int argc, char* argv[]){
 		}else if(strcmp(argv[i],"-interval")==0){update_interval=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-ip")==0){wifi_showip=true;
 		}else if(strcmp(argv[i],"-notime")==0){time_enabled=false;
+		}else if(strcmp(argv[i],"-uptime")==0){uptime_enabled=true;
 		}else if(strcmp(argv[i],"-freeplaycfg")==0){freeplaycfg_path=(char*)argv[i+1]; if(access(freeplaycfg_path,R_OK)!=0){printf("info2png : Failed, %s not readable\n",freeplaycfg_path);return 1;}
 		}else if(strcmp(argv[i],"-o")==0){data_output_path=(char*)argv[i+1]; if(access(data_output_path,W_OK)!=0){printf("info2png : Failed, %s not writable\n",data_output_path);return 1;}}
 	}
@@ -273,6 +276,7 @@ int main(int argc, char* argv[]){
 	if(access("/sbin/iw",F_OK)!=0){printf("info2png : Warning, WIFI link speed detection require 'iw' software\n");}
 	
 	if(!time_enabled){printf("info2png : Time display disable\n");}
+	if(uptime_enabled){printf("info2png : Use system uptime instead of time\n");}
 	
 	while(true){
 		chdir(data_output_path);							//change directory to output path
@@ -357,9 +361,14 @@ int main(int argc, char* argv[]){
 			
 			for(int i=-gd_image_h;i<gd_image_w;i+=6){gdImageLine(gd_image,i,0,i+gd_image_h,gd_image_h,gd_col_darkergray);}				//background decoration
 			
+			//battery_enabled=false; //debug
+			//wifi_enabled=false; //debug
+			//time_enabled=false; //debug
+			//uptime_enabled=true; //debug
 			
 			//start of the left side
 			gd_x_current=gd_char_w; //update x position
+			
 			if(battery_enabled){ //battery voltage render
 				if(vbatlow_value<0){ //low battery voltage not set
 					gd_col_text=gd_col_green; //allocate gd color (green)
@@ -370,12 +379,21 @@ int main(int argc, char* argv[]){
 				
 				battery_percent=nns_get_battery_percentage((int)(vbat_value*1000)); //try to get battery percentage
 				gd_tmp_charcount=sprintf(gd_chararray,"%d%%/%.2fv",battery_percent,vbat_value); //prepare char array to render
+				if(!wifi_enabled&&!time_enabled){ //place battery on right side if no wifi and no time
+					gd_x_current=gd_image_w-gd_char_w-9-gd_tmp_charcount*gd_char_w;
+					gd_x_last=gd_x_current-gd_char_w-1;
+				}
 				gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current,1,0x00,gd_col_text); //draw battery icon
 				gdImageString(gd_image,gdFontTiny,gd_x_current+9,1,(unsigned char*)gd_chararray,gd_col_text); //print battery info to gd image
 				gd_x_current+=9+gd_tmp_charcount*gd_char_w; //update x position
 				gdImageChar(gd_image,gdFontTiny,gd_x_current-6*gd_char_w,1,0x2F,gd_col_gray); //draw / in gray
-				gdImageLine(gd_image,gd_x_current+gd_char_w,1,gd_x_current+gd_char_w,gd_image_h-2,gd_col_darkgray); //draw separator
-				gd_x_current+=2*gd_char_w+1; //update x position
+				if(!wifi_enabled&&!time_enabled){
+					gdImageLine(gd_image,gd_x_last+1,1,gd_x_last+1,gd_image_h-2,gd_col_darkgray); //draw separator
+					gd_x_current=gd_char_w; //update x position to restart on left side
+				}else{
+					gdImageLine(gd_image,gd_x_current+gd_char_w,1,gd_x_current+gd_char_w,gd_image_h-2,gd_col_darkgray); //draw separator
+					gd_x_current+=2*gd_char_w+1; //update x position
+				}
 			}
 			
 			
@@ -414,13 +432,17 @@ int main(int argc, char* argv[]){
 			if(cpuload_value<10){gdImageChar(gd_image,gdFontTiny,gd_x_current+gd_char_w,1,0x30,gd_col_gray);} //draw 0 in gray
 			gd_x_current+=gd_tmp_charcount*gd_char_w; //update x position
 			gdImageLine(gd_image,gd_x_current+gd_char_w,1,gd_x_current+gd_char_w,gd_image_h-2,gd_col_darkgray); //draw separator
-			gd_x_last=gd_x_current+gd_char_w+1; //update last x position, used for filler
+			if(battery_enabled&&!wifi_enabled&&!time_enabled){ //battery is placed on right side
+				gdImageLine(gd_image,gd_x_current+gd_char_w,(gd_image_h/2)-1,gd_x_last,(gd_image_h/2)-1,gd_col_darkgray); //filler
+			}else{gd_x_last=gd_x_current+gd_char_w+1;} //update last x position, used for filler
 			
 			
 			//start of the right side
 			gd_x_current=gd_image_w-gd_char_w; //update x position
 			if(time_enabled){ //time render
-				now=time(0); ltime=localtime(&now); //current date/time, localtime object
+				if(uptime_enabled){
+					now=uptime_value; ltime=gmtime(&now); //current uptime, gmtime object
+				}else{now=time(0); ltime=localtime(&now);} //current date/time, localtime object
 				gd_tmp_charcount=sprintf(gd_chararray,"%02i:%02i",ltime->tm_hour,ltime->tm_min); //prepare char array to render
 				gd_x_current-=gd_tmp_charcount*gd_char_w; //update x position
 				gdImageLine(gd_image,gd_x_current-gd_char_w,1,gd_x_current-gd_char_w,gd_image_h-2,gd_col_darkgray); //draw separator
@@ -442,8 +464,8 @@ int main(int argc, char* argv[]){
 				
 				if(wifi_linkspeed<1){gd_col_text=gd_col_white; //no link speed=white
 				}else{
-						gd_col_tmp=rgbcolorstep(wifi_linkspeed,5,72,(int)0x00ff0000,(int)0x0000ff00); //compute integer color
-						gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF); //allocate gd color
+					gd_col_tmp=rgbcolorstep(wifi_linkspeed,5,72,(int)0x00ff0000,(int)0x0000ff00); //compute integer color
+					gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF); //allocate gd color
 				}
 				
 				gdImageString(gd_image,gdFontTiny,gd_x_current,1,(unsigned char*)gd_wifi_chararray,gd_col_text); //print wifi link speed
@@ -453,7 +475,7 @@ int main(int argc, char* argv[]){
 				gd_x_current-=2*gd_char_w-1; //update x position
 			}
 			
-			gdImageLine(gd_image,gd_x_current+gd_char_w-1,(gd_image_h/2)-1,gd_x_last,(gd_image_h/2)-1,gd_col_darkgray); //filler
+			if(!battery_enabled&&(wifi_enabled||time_enabled)){gdImageLine(gd_image,gd_x_current+gd_char_w-1,(gd_image_h/2)-1,gd_x_last,(gd_image_h/2)-1,gd_col_darkgray);} //filler
 			
 			gdImageLine(gd_image,0,gd_image_h-1,gd_image_w,gd_image_h-1,gd_col_gray); 				//bottom decoration
 			
