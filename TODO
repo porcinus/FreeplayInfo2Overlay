@@ -1,11 +1,1 @@
-info2png v0.1i: 
-- Change elements position depending on what is enable:
-|battery|cpu|----|wifi|time|
-|cpu|------------|wifi|time|
-|cpu|-----------------|wifi|
-|cpu|-----------------|time|
-|cpu|---------------|uptime| <- need to be implement
-|cpu|--------------|battery| <- need to be implement
-|cpu|----------------------| <- cpu feel lonely, found something to held it
 
-- Implement system uptime instead of time possibility via argument
