@@ -10,6 +10,18 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 
 - img2dispmanx : This file heavily based on https://github.com/hex007/eop , use to display png or jpeg picture to dispmanx.
 
+# Todo
+info2png v0.1i: 
+- Change elements position depending on what is enable:
+- |battery|cpu|----|wifi|time|
+- |cpu|------------|wifi|time|
+- |cpu|-----------------|wifi|
+- |cpu|-----------------|time|
+- |cpu|---------------|uptime| <- need to be implement
+- |cpu|--------------|battery| <- need to be implement
+- |cpu|----------------------| <- cpu feel lonely, found something to held it
+- Implement system uptime instead of time possibility via argument
+
 # History
 
 info2png:
