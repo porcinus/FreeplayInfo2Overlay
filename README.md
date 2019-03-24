@@ -20,7 +20,7 @@ info2png v0.1i:
 - |cpu|---------------|uptime| <- need to be implement
 - |cpu|--------------|battery| <- need to be implement
 - |cpu|----------------------| <- cpu feel lonely, found something to held it
-- Implement system uptime instead of time possibility via argument
+- (done) Implement system uptime instead of time possibility via argument
 
 # History
 
