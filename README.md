@@ -11,16 +11,8 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 - img2dispmanx : This file heavily based on https://github.com/hex007/eop , use to display png or jpeg picture to dispmanx.
 
 # Todo
-info2png v0.1i: 
-- Change elements position depending on what is enable:
-- |battery|cpu|----|wifi|time|
-- |cpu|------------|wifi|time|
-- |cpu|-----------------|wifi|
-- |cpu|-----------------|time|
-- |cpu|---------------|uptime| <- need to be implement
-- |cpu|--------------|battery| <- need to be implement
-- |cpu|----------------------| <- cpu feel lonely, found something to held it
-- (done) Implement system uptime instead of time possibility via argument
+
+
 
 # History
 
@@ -32,7 +24,7 @@ info2png:
 - 0.1e : Allow user not to use resistor divider for battery monitoring.
 - 0.1f : Battery monitoring rework to allow retry on failure, arguments combination rework as well, RGB-HSL implement.
 - 0.1g : Battery percentage prediction.
-- 0.1h : Time display can be disable using -notime, freeplayfbcp.cfg can be set using -freeplaycfg to get width of the TFT screen. Battery, CPU and WiFi text replaced by icons. WiFi icon color based on signal strength.
+- 0.1h : Time display can be disable using -notime or display system uptime using -uptime, freeplayfbcp.cfg can be set using -freeplaycfg to get width of the TFT screen. Battery, CPU and WiFi text replaced by icons. WiFi icon color based on signal strength, arrangement changed depending on things to display.
 
 png2fb16 (deprecated, will be deleted in the future):
 - 0.1a : Initial release.
