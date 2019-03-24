@@ -85,7 +85,7 @@ To add this as a item in Retropie menu in EmulationStation:
 ```sudo fbi -1 -t "10" -noverbose -a "/dev/shm/vbat-plot.png" </dev/tty &>/dev/null```
 
  - Temporary disable gamelist update in EmulationStation setting.
- - Edit "/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml" and add before "</gameList>":
+ - Edit "/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml" and add before ```</gameList>```:
 ```<game><path>./vbatgraph.sh</path><name>Battery Graph</name></game>```
 
  - Restart EmulationStation.
