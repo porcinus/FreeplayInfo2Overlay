@@ -138,7 +138,7 @@ int gd_image_w=-1, gd_image_h=-1;		//gd image size
 const int gd_char_w=5; 							//gd image char width
 int gd_col_black, gd_col_white, gd_col_gray, gd_col_darkgray, gd_col_darkergray, gd_col_green, gd_col_tmp, gd_col_text; //gd colors
 
-char gd_icons[]={ //custom gd font char array
+char gd_icons[]={ //custom gd font char array 8x8
 0,0,1,1,1,1,0,0, //char 0 : battery
 0,1,1,0,0,1,1,0,
 0,1,0,0,0,0,1,0,
@@ -163,7 +163,7 @@ char gd_icons[]={ //custom gd font char array
 0,0,1,0,1,0,1,0,
 0,0,1,0,1,0,1,0,
 0,0,1,0,1,0,1,0};
-gdFont gd_icons_8x8_font_ref = {3,0,8,8,gd_icons}; //declare custom gd font
+gdFont gd_icons_8x8_font_ref = {3,0,8,8,gd_icons}; //declare custom gd font 8x8
 gdFontPtr gd_icons_8x8_font = &gd_icons_8x8_font_ref; //pointer to custom gd font
 
 int gd_x_current,gd_x_last,gd_x_wifi; //gd x text position
@@ -349,17 +349,18 @@ int main(int argc, char* argv[]){
 				}
 			}
 			
-			gd_image=gdImageCreateTrueColor(gd_image_w,gd_image_h);																														//allocate gd image
+			gd_image=gdImageCreateTrueColor(gd_image_w,gd_image_h); //allocate gd image
 			
-			gd_col_black=gdImageColorAllocate(gd_image, 0, 0, 0);																															//since it is the first color declared, it will be the background
-			gd_col_white=gdImageColorAllocate(gd_image, 255, 255, 255);																												//declarate white color
-			gd_col_gray=gdImageColorAllocate(gd_image, 128, 128, 128);																												//declarate gray color
-			gd_col_darkgray=gdImageColorAllocate(gd_image, 64, 64, 64);																												//declarate dark gray color
-			gd_col_darkergray=gdImageColorAllocate(gd_image, 40, 40, 40);																											//declarate darker gray color
-			gd_col_green=gdImageColorAllocate(gd_image, 0, 255, 0);																														//declarate green color
+			//color int alpha|red|green|blue
+			gd_col_black=(int)0x00000000; //since it is the first color declared, it will be the background
+			gd_col_white=(int)0x00ffffff; //declarate white color
+			gd_col_gray=(int)0x00808080; //declarate gray color
+			gd_col_darkgray=(int)0x00404040; //declarate dark gray color
+			gd_col_darkergray=(int)0x00282828; //declarate darker gray color
+			gd_col_green=(int)0x0000ff00; //declarate green color
 			
 			
-			for(int i=-gd_image_h;i<gd_image_w;i+=6){gdImageLine(gd_image,i,0,i+gd_image_h,gd_image_h,gd_col_darkergray);}				//background decoration
+			for(int i=-gd_image_h;i<gd_image_w;i+=6){gdImageLine(gd_image,i,0,i+gd_image_h,gd_image_h,gd_col_darkergray);} //background decoration
 			
 			//battery_enabled=false; //debug
 			//wifi_enabled=false; //debug
@@ -368,14 +369,10 @@ int main(int argc, char* argv[]){
 			
 			//start of the left side
 			gd_x_current=gd_char_w; //update x position
-			
+			gd_x_last=gd_image_w; //update x last position
 			if(battery_enabled){ //battery voltage render
-				if(vbatlow_value<0){ //low battery voltage not set
-					gd_col_text=gd_col_green; //allocate gd color (green)
-				}else{
-					gd_col_tmp=rgbcolorstep(vbat_value,vbatlow_value,4.2,(int)0x00ff0000,(int)0x0000ff00); //compute int color
-					gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF); //allocate gd color
-				}
+				if(vbatlow_value<0){gd_col_text=gd_col_green; //low battery voltage not set, set color to green
+				}else{gd_col_text=rgbcolorstep(vbat_value,vbatlow_value,4.2,(int)0x00ff0000,(int)0x0000ff00);} //compute int color
 				
 				battery_percent=nns_get_battery_percentage((int)(vbat_value*1000)); //try to get battery percentage
 				gd_tmp_charcount=sprintf(gd_chararray,"%d%%/%.2fv",battery_percent,vbat_value); //prepare char array to render
@@ -403,11 +400,8 @@ int main(int argc, char* argv[]){
 			fclose(temp_filehandle); //close sys file
 			cpu_value=atoi(cpu_buf)/1000; //compute temperature
 			gd_tmp_charcount=sprintf(gd_chararray,"%i°c",cpu_value); //prepare char array to render
-			
-			gd_col_tmp=rgbcolorstep(cpu_value,50,80,(int)0x0000ff00,(int)0x00ff0000); //compute int color
-			gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF); //allocate gd color
-			
-			gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current,0,0x01,gd_col_tmp); //draw cpu icon
+			gd_col_text=rgbcolorstep(cpu_value,50,80,(int)0x0000ff00,(int)0x00ff0000); //compute int color
+			gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current,0,0x01,gd_col_text); //draw cpu icon
 			gdImageString(gd_image,gdFontTiny,gd_x_current+9,1,(unsigned char*)gd_chararray,gd_col_text); //print cpu temp to gd image
 			gd_x_current+=9+(gd_tmp_charcount+1)*gd_char_w; //update x position
 			gdImageChar(gd_image,gdFontTiny,gd_x_current-gd_char_w,1,0x2F,gd_col_gray); //draw / in gray
@@ -423,16 +417,13 @@ int main(int argc, char* argv[]){
 		  fclose(temp_filehandle);
 		  cpuload_value=(((b[0]+b[1]+b[2]) - (a[0]+a[1]+a[2])) / ((b[0]+b[1]+b[2]+b[3]) - (a[0]+a[1]+a[2]+a[3])))*100;
 			gd_tmp_charcount=sprintf(gd_chararray,"%3i%%",cpuload_value); //prepare char array to render
-			
-			gd_col_tmp=rgbcolorstep(cpuload_value,25,100,(int)0x0000ff00,(int)0x00ff0000); //compute integer color
-			gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF); //allocate gd color
-			
+			gd_col_text=rgbcolorstep(cpuload_value,25,100,(int)0x0000ff00,(int)0x00ff0000); //compute int color
 			gdImageString(gd_image,gdFontTiny,gd_x_current,1,(unsigned char*)gd_chararray,gd_col_text);//print cpu load
 			if(cpuload_value<100){gdImageChar(gd_image,gdFontTiny,gd_x_current,1,0x30,gd_col_gray);} //draw 0 in gray
 			if(cpuload_value<10){gdImageChar(gd_image,gdFontTiny,gd_x_current+gd_char_w,1,0x30,gd_col_gray);} //draw 0 in gray
 			gd_x_current+=gd_tmp_charcount*gd_char_w; //update x position
 			gdImageLine(gd_image,gd_x_current+gd_char_w,1,gd_x_current+gd_char_w,gd_image_h-2,gd_col_darkgray); //draw separator
-			if(battery_enabled&&!wifi_enabled&&!time_enabled){ //battery is placed on right side
+			if(!wifi_enabled&&!time_enabled){ //battery is placed on right side
 				gdImageLine(gd_image,gd_x_current+gd_char_w,(gd_image_h/2)-1,gd_x_last,(gd_image_h/2)-1,gd_col_darkgray); //filler
 			}else{gd_x_last=gd_x_current+gd_char_w+1;} //update last x position, used for filler
 			
@@ -440,8 +431,7 @@ int main(int argc, char* argv[]){
 			//start of the right side
 			gd_x_current=gd_image_w-gd_char_w; //update x position
 			if(time_enabled){ //time render
-				if(uptime_enabled){
-					now=uptime_value; ltime=gmtime(&now); //current uptime, gmtime object
+				if(uptime_enabled){now=uptime_value; ltime=gmtime(&now); //current uptime, gmtime object
 				}else{now=time(0); ltime=localtime(&now);} //current date/time, localtime object
 				gd_tmp_charcount=sprintf(gd_chararray,"%02i:%02i",ltime->tm_hour,ltime->tm_min); //prepare char array to render
 				gd_x_current-=gd_tmp_charcount*gd_char_w; //update x position
@@ -455,27 +445,20 @@ int main(int argc, char* argv[]){
 				gd_x_current-=gd_wifi_charcount*gd_char_w; //update x position
 				if(!wifi_showip){ //draw wifi icon with color based on signal 
 					if(vbatlow_value<0){gd_col_text=gd_col_white; //no signal=white
-					}else{
-						gd_col_tmp=rgbcolorstep(wifi_signal,30,91,(int)0x00ff0000,(int)0x0000ff00); //compute integer color
-						gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF); //allocate gd color
-					}
+					}else{gd_col_text=rgbcolorstep(wifi_signal,30,91,(int)0x00ff0000,(int)0x0000ff00);} //compute int color
 					gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-9,0,0x02,gd_col_text);
 				}
-				
 				if(wifi_linkspeed<1){gd_col_text=gd_col_white; //no link speed=white
-				}else{
-					gd_col_tmp=rgbcolorstep(wifi_linkspeed,5,72,(int)0x00ff0000,(int)0x0000ff00); //compute integer color
-					gd_col_text=gdImageColorAllocate(gd_image,(gd_col_tmp>>16)&0x0FF,(gd_col_tmp>>8)&0x0FF,(gd_col_tmp>>0)&0x0FF); //allocate gd color
-				}
-				
+				}else{gd_col_text=rgbcolorstep(wifi_linkspeed,5,72,(int)0x00ff0000,(int)0x0000ff00);} //compute int color
 				gdImageString(gd_image,gdFontTiny,gd_x_current,1,(unsigned char*)gd_wifi_chararray,gd_col_text); //print wifi link speed
-				
 				if(!wifi_showip){gd_x_current-=9;} //update x position
 				gdImageLine(gd_image,gd_x_current-gd_char_w,1,gd_x_current-gd_char_w,gd_image_h-2,gd_col_darkgray); //draw separator
 				gd_x_current-=2*gd_char_w-1; //update x position
 			}
 			
-			if(!battery_enabled&&(wifi_enabled||time_enabled)){gdImageLine(gd_image,gd_x_current+gd_char_w-1,(gd_image_h/2)-1,gd_x_last,(gd_image_h/2)-1,gd_col_darkgray);} //filler
+			
+			if((wifi_enabled||time_enabled)){gdImageLine(gd_image,gd_x_current+gd_char_w-1,(gd_image_h/2)-1,gd_x_last,(gd_image_h/2)-1,gd_col_darkgray);} //filler
+			
 			
 			gdImageLine(gd_image,0,gd_image_h-1,gd_image_w,gd_image_h-1,gd_col_gray); 				//bottom decoration
 			
@@ -484,6 +467,7 @@ int main(int argc, char* argv[]){
 			fclose(temp_filehandle);																																																//close image file
 			gdImageDestroy(gd_image);																																																//free gd image memory
 		}
+		//return 0; //debug
 		sleep(update_interval); //sleep
 	}
 	
