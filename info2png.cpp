@@ -3,7 +3,7 @@ NNS @ 2018
 info2png
 It create a PNG/log file contening CPU load and temperature, Wifi link speed and time, Battery voltage is optional.
 */
-const char programversion[]="0.1h"; //program version
+const char programversion[]="0.1i"; //program version
 
 
 #include "gd.h"							//libgd
@@ -109,6 +109,7 @@ bool wifi_enabled=false;							//wifi boolean
 bool wifi_showip=false;								//ip address instead of link speed
 bool time_enabled=true;								//display time
 bool uptime_enabled=false;						//display uptime
+bool time_force_enabled=false;				//force time instead of uptime
 char cfg_buf[32];											//config read buffer
 
 
@@ -147,6 +148,7 @@ char gd_icons[]={ //custom gd font char array 8x8
 0,1,1,1,1,1,1,0,
 0,1,0,0,0,0,1,0,
 0,1,1,1,1,1,1,0,
+
 0,0,0,0,0,0,0,0, //char 1 : cpu
 0,1,0,1,0,1,0,0,
 1,1,1,1,1,1,1,0,
@@ -155,6 +157,7 @@ char gd_icons[]={ //custom gd font char array 8x8
 0,1,0,0,0,1,0,0,
 1,1,1,1,1,1,1,0,
 0,1,0,1,0,1,0,0,
+
 0,0,0,0,0,0,0,0, //char 2 : wifi
 0,0,1,0,0,0,0,0,
 0,1,0,1,0,0,0,0,
@@ -162,8 +165,26 @@ char gd_icons[]={ //custom gd font char array 8x8
 0,0,1,0,0,0,1,0,
 0,0,1,0,1,0,1,0,
 0,0,1,0,1,0,1,0,
-0,0,1,0,1,0,1,0};
-gdFont gd_icons_8x8_font_ref = {3,0,8,8,gd_icons}; //declare custom gd font 8x8
+0,0,1,0,1,0,1,0,
+
+0,0,1,1,1,1,0,0, //char 3 : clock
+0,1,0,0,0,0,1,0,
+1,0,0,1,0,0,0,1,
+1,0,0,1,0,0,0,1,
+1,0,0,0,1,1,0,1,
+1,0,0,0,0,0,0,1,
+0,1,0,0,0,0,1,0,
+0,0,1,1,1,1,0,0,
+
+0,0,0,0,1,0,0,0, //char 4 : uptime
+0,0,0,1,0,1,0,0,
+0,0,1,0,0,0,1,0,
+0,1,0,0,0,0,0,1,
+0,1,1,1,0,1,1,1,
+0,0,0,1,0,1,0,0,
+0,0,0,1,0,1,0,0,
+0,0,0,1,1,1,0,0};
+gdFont gd_icons_8x8_font_ref = {5,0,8,8,gd_icons}; //declare custom gd font 8x8
 gdFontPtr gd_icons_8x8_font = &gd_icons_8x8_font_ref; //pointer to custom gd font
 
 int gd_x_current,gd_x_last,gd_x_wifi; //gd x text position
@@ -175,6 +196,8 @@ long double a[4], b[4];						//use to compute cpu load
 char cpu_buf[7];									//cpu read buffer
 int cpuload_value=0;							//cpu load
 int uptime_value=0;								//uptime value
+unsigned int uptime_h=0;					//uptime hours value
+unsigned int uptime_m=0;					//uptime minutes value
 int wifi_linkspeed=0;							//wifi link speed
 int wifi_signal=0;								//wifi signal
 char pbuffer[20];									//buffer use to read process pipe
@@ -208,7 +231,8 @@ void show_usage(void){
 "\t-interval, [Optional] drawing interval in sec\n"
 "\t-ip, [Optional] display IP address instead of link speed\n"
 "\t-notime, [Optional] disable display of time\n"
-"\t-uptime, [Optional] system uptime instead of time\n"
+"\t-uptime, [Optional] force system uptime instead of time, set by default if no RTC chip detected\n"
+"\t-nouptime, [Optional] force time instead of system uptime even if no RTC chip detected\n"
 "\t-freeplaycfg, [Optional] usually \"/boot/freeplayfbcp.cfg\", provide data like screen width\n"
 "\t-o, output folder where 'vbat.log', 'vbat-start.log', 'vbat.srt'  and 'fb_footer.png'\n\n"
 "Resistor divider diagram:\n"
@@ -240,6 +264,7 @@ int main(int argc, char* argv[]){
 		}else if(strcmp(argv[i],"-ip")==0){wifi_showip=true;
 		}else if(strcmp(argv[i],"-notime")==0){time_enabled=false;
 		}else if(strcmp(argv[i],"-uptime")==0){uptime_enabled=true;
+		}else if(strcmp(argv[i],"-nouptime")==0){time_force_enabled=true;
 		}else if(strcmp(argv[i],"-freeplaycfg")==0){freeplaycfg_path=(char*)argv[i+1]; if(access(freeplaycfg_path,R_OK)!=0){printf("info2png : Failed, %s not readable\n",freeplaycfg_path);return 1;}
 		}else if(strcmp(argv[i],"-o")==0){data_output_path=(char*)argv[i+1]; if(access(data_output_path,W_OK)!=0){printf("info2png : Failed, %s not writable\n",data_output_path);return 1;}}
 	}
@@ -276,7 +301,12 @@ int main(int argc, char* argv[]){
 	if(access("/sbin/iw",F_OK)!=0){printf("info2png : Warning, WIFI link speed detection require 'iw' software\n");}
 	
 	if(!time_enabled){printf("info2png : Time display disable\n");}
+	if(time_force_enabled){printf("info2png : Use time instead of system uptime\n");uptime_enabled=false;}
 	if(uptime_enabled){printf("info2png : Use system uptime instead of time\n");}
+	
+	if(time_enabled&&!uptime_enabled&&!time_force_enabled){ //check if rtc chip is present, force uptime if not
+			if(access("/sys/class/rtc/rtc0",R_OK)!=0){printf("info2png : RTC chip not detected, use system uptime instead of time\n"); uptime_enabled=true;}
+	}
 	
 	while(true){
 		chdir(data_output_path);							//change directory to output path
@@ -366,6 +396,7 @@ int main(int argc, char* argv[]){
 			//wifi_enabled=false; //debug
 			//time_enabled=false; //debug
 			//uptime_enabled=true; //debug
+			//uptime_value=3600000; //debug
 			
 			//start of the left side
 			gd_x_current=gd_char_w; //update x position
@@ -373,7 +404,6 @@ int main(int argc, char* argv[]){
 			if(battery_enabled){ //battery voltage render
 				if(vbatlow_value<0){gd_col_text=gd_col_green; //low battery voltage not set, set color to green
 				}else{gd_col_text=rgbcolorstep(vbat_value,vbatlow_value,4.2,(int)0x00ff0000,(int)0x0000ff00);} //compute int color
-				
 				battery_percent=nns_get_battery_percentage((int)(vbat_value*1000)); //try to get battery percentage
 				gd_tmp_charcount=sprintf(gd_chararray,"%d%%/%.2fv",battery_percent,vbat_value); //prepare char array to render
 				if(!wifi_enabled&&!time_enabled){ //place battery on right side if no wifi and no time
@@ -431,13 +461,19 @@ int main(int argc, char* argv[]){
 			//start of the right side
 			gd_x_current=gd_image_w-gd_char_w; //update x position
 			if(time_enabled){ //time render
-				if(uptime_enabled){now=uptime_value; ltime=gmtime(&now); //current uptime, gmtime object
-				}else{now=time(0); ltime=localtime(&now);} //current date/time, localtime object
-				gd_tmp_charcount=sprintf(gd_chararray,"%02i:%02i",ltime->tm_hour,ltime->tm_min); //prepare char array to render
+				if(uptime_enabled){
+					uptime_h=uptime_value/3600; uptime_m=(uptime_value-uptime_h*3600)/60;
+					gd_tmp_charcount=sprintf(gd_chararray,"%02i:%02i",uptime_h,uptime_m); //prepare char array to render
+				}else{ //current date/time, localtime object
+					now=time(0); ltime=localtime(&now);
+					gd_tmp_charcount=sprintf(gd_chararray,"%02i:%02i",ltime->tm_hour,ltime->tm_min); //prepare char array to render
+				}
 				gd_x_current-=gd_tmp_charcount*gd_char_w; //update x position
-				gdImageLine(gd_image,gd_x_current-gd_char_w,1,gd_x_current-gd_char_w,gd_image_h-2,gd_col_darkgray); //draw separator
+				if(uptime_enabled){gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-10,1,0x04,gd_col_white); //uptime icon
+				}else{gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-10,1,0x03,gd_col_white);} //clock icon
+				gdImageLine(gd_image,gd_x_current-gd_char_w-10,1,gd_x_current-gd_char_w-10,gd_image_h-2,gd_col_darkgray); //draw separator
 				gdImageString(gd_image,gdFontTiny,gd_x_current,1,(unsigned char*)gd_chararray,gd_col_white); //print time
-				gd_x_current-=2*gd_char_w-1; //update x position
+				gd_x_current-=2*gd_char_w-1+10; //update x position
 			}
 			
 			
