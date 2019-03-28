@@ -3,7 +3,7 @@ NNS @ 2018
 info2png
 It create a PNG/log file contening CPU load and temperature, Wifi link speed and time, Battery voltage is optional.
 */
-const char programversion[]="0.1i"; //program version
+const char programversion[]="0.1j"; //program version
 
 
 #include "gd.h"							//libgd
@@ -18,6 +18,7 @@ const char programversion[]="0.1i"; //program version
 #include <locale.h>					//locale
 #include <limits.h>					//limits
 #include <math.h>						//math
+#include <dirent.h>  				//dir
 
 #include "battery_cm3.h"		//battery data for the Freeplay CM3 platform
 
@@ -110,17 +111,20 @@ bool wifi_showip=false;								//ip address instead of link speed
 bool time_enabled=true;								//display time
 bool uptime_enabled=false;						//display uptime
 bool time_force_enabled=false;				//force time instead of uptime
+bool backlight_set=false;							//display backlight info
+bool backlight_enabled=false;					//display backlight info
+bool rfkill_enabled=false;						//rfkill is running
 char cfg_buf[32];											//config read buffer
 
 
 
 
 //I2C variables
-char *i2c_bus;						//path to i2c bus
-int i2c_address=-1;				//i2c device adress, found via 'i2cdetect'
-int i2c_handle;						//i2c handle io
-char i2c_buffer[10]={0};	//i2c data buffer
-
+char *i2c_bus;									//path to i2c bus
+int i2c_address=-1;							//i2c device adress, found via 'i2cdetect'
+int backlight_i2c_address=-1;		//PCA9633 i2c adress, found via 'i2cdetect'
+int i2c_handle;									//i2c handle io
+char i2c_buffer[10]={0};				//i2c data buffer
 
 
 //ADC variables
@@ -131,6 +135,16 @@ int adc_raw_value=0;							//adc step value
 int adc_read_retry=0;							//adc reading retry if failure
 
 
+//PCA9633 variables
+int backlight_value=-1;
+int backlight_state=-1;
+
+
+//rfkill variables
+DIR *rfkill_dir_handle; 						//rfkill dir handle
+struct dirent *rfkill_dir_cnt; 			//rfkill dir contener
+int rfkill_value=0;									//rfkill value used to count hard and soft blocking
+int rfkill_count=0;									//rfkill value used to count max possible hard and soft blocking
 
 
 //GD variables
@@ -183,8 +197,26 @@ char gd_icons[]={ //custom gd font char array 8x8
 0,1,1,1,0,1,1,1,
 0,0,0,1,0,1,0,0,
 0,0,0,1,0,1,0,0,
-0,0,0,1,1,1,0,0};
-gdFont gd_icons_8x8_font_ref = {5,0,8,8,gd_icons}; //declare custom gd font 8x8
+0,0,0,1,1,1,0,0,
+
+0,0,0,1,1,1,0,0, //char 5 : backlight
+0,0,1,0,0,0,1,0,
+0,1,0,0,0,0,0,1,
+0,1,0,0,1,0,0,1,
+0,0,1,0,1,0,1,0,
+0,0,0,1,0,1,0,0,
+0,0,0,1,0,1,0,0,
+0,0,0,1,1,1,0,0,
+
+0,0,0,0,0,0,0,0, //char 6 : none
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0};
+gdFont gd_icons_8x8_font_ref = {7,0,8,8,gd_icons}; //declare custom gd font 8x8
 gdFontPtr gd_icons_8x8_font = &gd_icons_8x8_font_ref; //pointer to custom gd font
 
 int gd_x_current,gd_x_last,gd_x_wifi; //gd x text position
@@ -226,6 +258,7 @@ void show_usage(void){
 "\t-r2value, in ohm [Optional, used for battery voltage, disable resistor divider if not set]\n"
 "\t-vbatlow, in volt, low battery voltage to set text in red color [Optional, used for battery voltage monitoring]\n"
 "\t-vbatlogging, enable battery voltage logging, data will be put in 'vbat-start.log', format 'uptime;vbat' [Optional, used for battery voltage monitoring]\n"
+"\t-pca9633adress, [Optional] PCA9633 i2c adress, found via 'i2cdetect'\n"
 "\t-width, in px, width of 'fb_footer.png' [Optional, needed for generate png if path to freeplayfbcp.cfg not provided]\n"
 "\t-height, in px, height of 'fb_footer.png' [Optional, needed for generate png]\n"
 "\t-interval, [Optional] drawing interval in sec\n"
@@ -251,7 +284,8 @@ int main(int argc, char* argv[]){
 	for(int i=1;i<argc;++i){ //argument to variable
 		if(strcmp(argv[i],"-help")==0){show_usage();return 1;
 		}else if(strcmp(argv[i],"-i2cbus")==0){i2c_bus=(char*)argv[i+1]; if(access(i2c_bus,R_OK)!=0){printf("info2png : Failed, %s not readable\n",i2c_bus);return 1;}
-		}else if(strcmp(argv[i],"-i2caddress")==0){sscanf(argv[i+1], "%x", &i2c_address);/*htoi(argv[i+1])*/;
+		}else if(strcmp(argv[i],"-i2caddress")==0){sscanf(argv[i+1], "%x", &i2c_address);
+		}else if(strcmp(argv[i],"-pca9633adress")==0){sscanf(argv[i+1], "%x", &backlight_i2c_address); backlight_set=true;
 		}else if(strcmp(argv[i],"-adcvref")==0){adc_vref=atof(argv[i+1]);
 		}else if(strcmp(argv[i],"-adcres")==0){adc_resolution=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-r1value")==0){divider_r1=atoi(argv[i+1]);
@@ -272,7 +306,7 @@ int main(int argc, char* argv[]){
 	if(i2c_address<=0||adc_vref<=0||adc_resolution<=0||i2c_bus==NULL){ //user miss some arguments for battery
 		battery_enabled=false; battery_log_enabled=false; printf("info2png : Warning, battery monitoring disable, some arguments needed to get battery data are not set.\n");
 	}else{battery_set=true;} //all informations are set for battery probe, use in case of read failure to retry
-
+	
 	if(freeplaycfg_path!=NULL){ //freeplaycfg path set, try to read the config file
 		printf("info2png : freeplaycfg set, try to get viewport info\n");
 		temp_filehandle=fopen(freeplaycfg_path,"r"); //open handle
@@ -333,7 +367,6 @@ int main(int argc, char* argv[]){
 							}else{ //success
 								battery_enabled=true; //battery voltage read success
 								temp_filehandle=fopen("vbat.log","wb"); fprintf(temp_filehandle,"%.3f",vbat_value); fclose(temp_filehandle); //write log file
-								
 								if(battery_log_enabled){ //cumulative cumulative log file
 									temp_filehandle=fopen("/proc/uptime","r"); fscanf(temp_filehandle,"%u",&uptime_value); fclose(temp_filehandle); //get system uptime
 									temp_filehandle=fopen("vbat-start.log","a+"); fprintf(temp_filehandle,"%u;%.3f\n",uptime_value,vbat_value); fclose(temp_filehandle); //write cumulative log file
@@ -350,32 +383,113 @@ int main(int argc, char* argv[]){
 				}else{adc_read_retry=3;} //data read with success, no retry
 			}
 		}
-
+		
+		
 		//-----------------------------Start of GD part
 		if(png_enabled){ //png output enable
-			wifi_enabled=false;
-			if(access("/sbin/iw",F_OK)!=-1 && !wifi_showip){ //check if 'iw' is installed for WiFi link speed
-				temp_filehandle=popen("iw dev wlan0 link 2> /dev/null  | sed 's/^[[:space:]]*//g' | sed 's/ //g'", "r"); //open process pipe
-				if(temp_filehandle!=NULL){ //if process not fail
-					char *ret;
-					while(fgets(cfg_buf,sizeof(cfg_buf),temp_filehandle)!=NULL){	//read line
-						if(strstr(cfg_buf,"signal")!=NULL){sscanf(cfg_buf,"%*[^0123456789]%d",&wifi_signal); //signal
-						}else if(strstr(cfg_buf,"bitrate")!=NULL){ //speed
-							wifi_enabled=true;
-							sscanf(cfg_buf,"%*[^0123456789]%d",&wifi_linkspeed);
-							gd_wifi_charcount=sprintf(gd_wifi_chararray,"%iMBit/s",wifi_linkspeed);
+			
+			
+			rfkill_enabled=false; rfkill_value=0; rfkill_count=0; //reset rfkill variables
+			rfkill_dir_handle=opendir("/sys/class/rfkill"); //open dir handle
+			if(rfkill_dir_handle){ //no problem opening dir handle
+				while((rfkill_dir_cnt=readdir(rfkill_dir_handle))!=NULL){ //scan rfkill folder
+					if(strncmp(rfkill_dir_cnt->d_name,"rfkill",6)==0){ //filename start with 'rfkill'
+						strcpy(cfg_buf,"/sys/class/rfkill/"); //start building device path
+						strcat(cfg_buf,rfkill_dir_cnt->d_name); //concatenate device path
+						chdir(cfg_buf); //change directory
+						temp_filehandle=fopen("hard","r"); //open file handle
+						fgets(cfg_buf,sizeof(cfg_buf),temp_filehandle); //read file handle
+						fclose(temp_filehandle); //close file handle
+						if(atoi(cfg_buf)>0){rfkill_value++; //increment because of hard blocking
+						}else{
+							temp_filehandle=fopen("soft","r"); //open file handle
+							fgets(cfg_buf,sizeof(cfg_buf),temp_filehandle); //read file handle
+							fclose(temp_filehandle); //close file handle
+							if(atoi(cfg_buf)>0){rfkill_value++;} //increment because of soft blocking
+						}
+						rfkill_count++;
+					}
+				}
+				closedir(rfkill_dir_handle); //close dir handle
+			}
+			
+			if(rfkill_value>0&&rfkill_count>0&&rfkill_value==rfkill_count){rfkill_enabled=true;} //all devices are soft or hard blocked
+			
+			chdir(data_output_path);							//change directory back to output path
+			
+			
+			//battery_enabled=false; //debug
+			//wifi_enabled=false; //debug
+			//time_enabled=false; //debug
+			//backlight_enabled=false; //debug
+			//uptime_enabled=true; //debug
+			//rfkill_enabled=true; //debug
+			//uptime_value=3600000; //debug
+			
+			
+			if(backlight_set){ //all need for backlight monitoring is set, no retry on failure
+				backlight_enabled=false;
+				if((i2c_handle=open(i2c_bus,O_RDWR))<0){ //open i2c bus
+					printf("info2png : PCA9633 : Failed to open the I2C bus : %s\n",i2c_bus);
+				}else{
+					if(ioctl(i2c_handle,I2C_SLAVE,backlight_i2c_address)<0){ //access i2c device, allow retry if failed
+						printf("info2png : PCA9633 : Failed to access I2C device : %04x\n",backlight_i2c_address);
+					}else{ //success
+						i2c_buffer[0]=0x08; //LEDOUT register
+						if(write(i2c_handle,i2c_buffer,1)!=1){
+							printf("info2png : PCA9633 : Failed to write data to select LEDOUT register\n");
+						}else{
+							if(read(i2c_handle,i2c_buffer,1)!=1){ //start reading data from i2c device, allow retry if failed
+								printf("info2png : PCA9633 : Failed to read LEDOUT register\n");
+							}else{ //success
+								backlight_state=i2c_buffer[0]<<6>>6; //LED0 output state control, bitshift to get only LED0
+								backlight_enabled=true;
+								if(backlight_state==0){backlight_value=0; //00 —LED driver x is off
+								}else if(backlight_state==1){backlight_value=100; //01 —LED driver x is fully on
+								}else if(backlight_state==2||backlight_state==3){ //10 —LED driver x controlled through its PWMxregister
+									i2c_buffer[0]=0x02; //PWM0 register
+									if(write(i2c_handle,i2c_buffer,1)!=1){
+										printf("info2png : PCA9633 : Failed to write data to select PWM0 register\n");
+									}else{
+										if(read(i2c_handle,i2c_buffer,1)!=1){ //start reading data from i2c device, allow retry if failed
+											printf("info2png : PCA9633 : Failed to read PWM0 register\n");
+										}else{backlight_value=((i2c_buffer[0]*100)/255);} //success, convert to 0-100 range
+									}
+								}
+							}
 						}
 					}
-					pclose(temp_filehandle); //close process pipe
+					close(i2c_handle);
 				}
-			}else{ //'iw' is not installed, show ip address instead
-				temp_filehandle=popen("hostname -I | awk '{printf \"%s\",$1}'", "r");	//open process pipe
-				if(temp_filehandle!=NULL){ //if process not fail
-					if(fgets(pbuffer,sizeof(gd_wifi_chararray),temp_filehandle)){ //if output something
-						gd_wifi_charcount=sprintf(gd_wifi_chararray,"%s",pbuffer);
-			  		if(strcmp(gd_wifi_chararray,"127.0.0.1")==0){wifi_showip=false;} //if ip is 127.0.0.1, disable
-			  	}
-			  	pclose(temp_filehandle); //close process pipe
+			}
+			
+			
+			wifi_enabled=false;
+			if(!rfkill_enabled){ //if rfkill not detected
+				if(access("/sbin/iw",F_OK)!=-1 && !wifi_showip){ //check if 'iw' is installed for WiFi link speed
+					temp_filehandle=popen("iw dev wlan0 link 2> /dev/null  | sed 's/^[[:space:]]*//g' | sed 's/ //g'", "r"); //open process pipe
+					if(temp_filehandle!=NULL){ //if process not fail
+						char *ret;
+						while(fgets(cfg_buf,sizeof(cfg_buf),temp_filehandle)!=NULL){	//read line
+							if(strstr(cfg_buf,"signal")!=NULL){sscanf(cfg_buf,"%*[^0123456789]%d",&wifi_signal); //signal
+							}else if(strstr(cfg_buf,"bitrate")!=NULL){ //speed
+								wifi_enabled=true;
+								sscanf(cfg_buf,"%*[^0123456789]%d",&wifi_linkspeed);
+								gd_wifi_charcount=sprintf(gd_wifi_chararray,"%iMBit/s",wifi_linkspeed);
+							}
+						}
+						pclose(temp_filehandle); //close process pipe
+					}
+				}else{ //'iw' is not installed, show ip address instead
+					temp_filehandle=popen("hostname -I | awk '{printf \"%s\",$1}'", "r");	//open process pipe
+					if(temp_filehandle!=NULL){ //if process not fail
+						if(fgets(pbuffer,sizeof(gd_wifi_chararray),temp_filehandle)){ //if output something
+							gd_wifi_charcount=sprintf(gd_wifi_chararray,"%s",pbuffer);
+				  		if(strcmp(gd_wifi_chararray,"127.0.0.1")==0){wifi_showip=false; //if ip is 127.0.0.1, disable
+				  		}else{wifi_showip=true; wifi_enabled=true;}
+				  	}
+				  	pclose(temp_filehandle); //close process pipe
+					}
 				}
 			}
 			
@@ -392,11 +506,6 @@ int main(int argc, char* argv[]){
 			
 			for(int i=-gd_image_h;i<gd_image_w;i+=6){gdImageLine(gd_image,i,0,i+gd_image_h,gd_image_h,gd_col_darkergray);} //background decoration
 			
-			//battery_enabled=false; //debug
-			//wifi_enabled=false; //debug
-			//time_enabled=false; //debug
-			//uptime_enabled=true; //debug
-			//uptime_value=3600000; //debug
 			
 			//start of the left side
 			gd_x_current=gd_char_w; //update x position
@@ -453,7 +562,7 @@ int main(int argc, char* argv[]){
 			if(cpuload_value<10){gdImageChar(gd_image,gdFontTiny,gd_x_current+gd_char_w,1,0x30,gd_col_gray);} //draw 0 in gray
 			gd_x_current+=gd_tmp_charcount*gd_char_w; //update x position
 			gdImageLine(gd_image,gd_x_current+gd_char_w,1,gd_x_current+gd_char_w,gd_image_h-2,gd_col_darkgray); //draw separator
-			if(!wifi_enabled&&!time_enabled){ //battery is placed on right side
+			if(!wifi_enabled&&!time_enabled&&!backlight_enabled&&!rfkill_enabled){ //battery is placed on right side
 				gdImageLine(gd_image,gd_x_current+gd_char_w,(gd_image_h/2)-1,gd_x_last,(gd_image_h/2)-1,gd_col_darkgray); //filler
 			}else{gd_x_last=gd_x_current+gd_char_w+1;} //update last x position, used for filler
 			
@@ -477,7 +586,23 @@ int main(int argc, char* argv[]){
 			}
 			
 			
-			if(wifi_enabled||wifi_showip){ //wifi render
+			if(backlight_enabled){ //backlight render
+				gd_tmp_charcount=sprintf(gd_chararray,"%i%%",backlight_value); //prepare char array to render
+				gd_x_current-=gd_tmp_charcount*gd_char_w; //update x position
+				gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-9,1,0x05,gd_col_white);
+				gdImageString(gd_image,gdFontTiny,gd_x_current,1,(unsigned char*)gd_chararray,gd_col_white); //print wifi link speed
+				gdImageLine(gd_image,gd_x_current-gd_char_w-9,1,gd_x_current-gd_char_w-9,gd_image_h-2,gd_col_darkgray); //draw separator
+				gd_x_current-=2*gd_char_w-1+9; //update x position
+			}
+			
+			
+			if(rfkill_enabled){ //airplane mode render
+				gd_tmp_charcount=sprintf(gd_chararray,"Airplane Mode"); //prepare char array to render
+				gd_x_current-=gd_tmp_charcount*gd_char_w; //update x position
+				gdImageString(gd_image,gdFontTiny,gd_x_current,1,(unsigned char*)gd_chararray,gd_col_green); //print wifi link speed
+				gdImageLine(gd_image,gd_x_current-gd_char_w,1,gd_x_current-gd_char_w,gd_image_h-2,gd_col_darkgray); //draw separator
+				gd_x_current-=2*gd_char_w-1; //update x position
+			}else if(wifi_enabled||wifi_showip){ //wifi render
 				gd_x_current-=gd_wifi_charcount*gd_char_w; //update x position
 				if(!wifi_showip){ //draw wifi icon with color based on signal 
 					if(vbatlow_value<0){gd_col_text=gd_col_white; //no signal=white
@@ -493,7 +618,7 @@ int main(int argc, char* argv[]){
 			}
 			
 			
-			if((wifi_enabled||time_enabled)){gdImageLine(gd_image,gd_x_current+gd_char_w-1,(gd_image_h/2)-1,gd_x_last,(gd_image_h/2)-1,gd_col_darkgray);} //filler
+			if(wifi_enabled||time_enabled||backlight_enabled||rfkill_enabled){gdImageLine(gd_image,gd_x_current+gd_char_w-1,(gd_image_h/2)-1,gd_x_last,(gd_image_h/2)-1,gd_col_darkgray);} //filler
 			
 			
 			gdImageLine(gd_image,0,gd_image_h-1,gd_image_w,gd_image_h-1,gd_col_gray); 				//bottom decoration
