@@ -26,6 +26,7 @@ info2png:
 - 0.1g : Battery percentage prediction.
 - 0.1h : Time display can be disable using -notime or display system uptime using -uptime, freeplayfbcp.cfg can be set using -freeplaycfg to get width of the TFT screen. Battery, CPU and WiFi text replaced by icons. WiFi icon color based on signal strength, arrangement changed depending on things to display.
 - 0.1i : By default, if no RTC chip detected, the software will show system uptime instead of time, this can be disable by using -nouptime. Clock and uptime icons added.
+- 0.1j : Can monitor PCA9633 pwm value if i2c adress provided via -pca9633adress argument. Can now detect rfkill state of each wireless device to notify user if in "Airplane Mode".
 
 png2fb16 (deprecated, will be deleted in the future):
 - 0.1a : Initial release.
