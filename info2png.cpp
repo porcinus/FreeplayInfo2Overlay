@@ -493,6 +493,7 @@ int main(int argc, char* argv[]){
 				}
 			}
 			
+			
 			gd_image=gdImageCreateTrueColor(gd_image_w,gd_image_h); //allocate gd image
 			
 			//color int alpha|red|green|blue
@@ -606,7 +607,7 @@ int main(int argc, char* argv[]){
 				gd_x_current-=gd_wifi_charcount*gd_char_w; //update x position
 				if(!wifi_showip){ //draw wifi icon with color based on signal 
 					if(vbatlow_value<0){gd_col_text=gd_col_white; //no signal=white
-					}else{gd_col_text=rgbcolorstep(wifi_signal,30,91,(int)0x00ff0000,(int)0x0000ff00);} //compute int color
+					}else{gd_col_text=rgbcolorstep(wifi_signal,30,91,(int)0x0000ff00,(int)0x00ff0000);} //compute int color
 					gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-9,0,0x02,gd_col_text);
 				}
 				if(wifi_linkspeed<1){gd_col_text=gd_col_white; //no link speed=white
