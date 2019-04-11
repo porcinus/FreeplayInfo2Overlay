@@ -3,7 +3,7 @@ NNS @ 2018
 nns-overlay-deamon
 Use to create a 'OSD' on program running on gl or dispmanx driver
 */
-const char programversion[]="0.1e";
+const char programversion[]="0.1f";
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -35,15 +35,12 @@ bool gpio_lowbatexported=false;				//gpio low battery is exported?
 char *png_path;												//full path to str file
 bool png_exist=false;									//file exist?
 char program_path[PATH_MAX];					//full path to this program
-//int screen_width=-1;									//screen width
-//int bar_height=0;									  	//bar height
 int duration = -1;										//video duration
 char img2dispmanx_exec_path[PATH_MAX];								//full command line to run img2dispmanx
-
-
 char icon_overheat_max_exec_path[PATH_MAX];		//full command line to run img2dispmanx cpu-overheat-max
 char icon_overheat_warn_exec_path[PATH_MAX];	//full command line to run img2dispmanx cpu-overheat-warning
 char icon_lowbat_exec_path[PATH_MAX];					//full command line to run img2dispmanx low-battery
+unsigned int img2dispmanx_start = 0;					//time of last overlay run
 unsigned int icon_overheat_max_start = 0;			//time of last cpu-overheat-max run
 unsigned int icon_overheat_warn_start = 0;		//time of last cpu-overheat-warning run
 unsigned int tmp_time = 0;										//little opt
@@ -62,8 +59,6 @@ void show_usage(void){
 	printf("\t-interval, optional, pin checking interval in msec\n");
 	printf("\t-file, full path to png file, used for OSD\n");
 	printf("\t-duration, in sec, used for OSD\n");
-	//printf("\t-screenwidth, screen width, optional, used for OSD\n");
-	//printf("\t-height, bar height, optional, used for OSD\n");
 	printf("\t-lowbatpin, optional, gpio pin used to signal low battery, disable if not set\n");
 	printf("\t-lowbatreverselogic, optional, reverse activelow logic for lowbatpin\n");
 }
@@ -82,11 +77,9 @@ int main(int argc, char *argv[]){
 		}else if(strcmp(argv[i],"-interval")==0){gpio_interval=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-file")==0){png_path=(char*)argv[i+1];
 		}else if(strcmp(argv[i],"-duration")==0){duration=atoi(argv[i+1]);}
-		//}else if(strcmp(argv[i],"-screenwidth")==0){screen_width=atoi(argv[i+1]);
-		//}else if(strcmp(argv[i],"-height")==0){bar_height=atoi(argv[i+1]);}
 	}
 	
-	if(gpio_pin<0||/*screen_width<0||*/duration<0){printf("nns-overlay-deamon : Failed, missing some arguments\n");show_usage();return 1;} //user miss some needed arguments
+	if(gpio_pin<0||duration<0){printf("nns-overlay-deamon : Failed, missing some arguments\n");show_usage();return 1;} //user miss some needed arguments
 	if(gpio_interval<100||gpio_interval>600){printf("nns-overlay-deamon : Warning, wrong cheking interval set, setting it to 200msec\n");gpio_interval=200;} //wrong interval
 	if(gpio_reverselogic){printf("nns-overlay-deamon : Reversed activelow logic\n");}
 	
@@ -138,8 +131,6 @@ int main(int argc, char *argv[]){
 		//printf("program path:%s\n",program_path);
 	}
 	
-	
-	
 	//check pin direction
 	chdir(gpio_path); //change directory to gpio sysfs
 	temp_filehandle = fopen("direction","r"); fgets(gpio_buffer,sizeof(gpio_buffer),temp_filehandle); fclose(temp_filehandle); //read gpio direction
@@ -149,8 +140,6 @@ int main(int argc, char *argv[]){
 	//check if pin is active low
 	temp_filehandle = fopen("active_low","r"); fgets(gpio_buffer,sizeof(gpio_buffer),temp_filehandle); fclose(temp_filehandle); //read gpio active low
 	if(strcmp(gpio_buffer,"1")==0){gpio_activelow=true;} //parse gpio active low
-	
-	
 	
 	//check low battery pin direction
 	if(gpio_lowbatpin>-1){ //low battery enable
@@ -164,37 +153,22 @@ int main(int argc, char *argv[]){
 		if(strcmp(gpio_buffer,"1")==0){gpio_lowbatactivelow=true;} //parse gpio active low
 	}
 	
-	
-
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	snprintf(img2dispmanx_exec_path,sizeof(img2dispmanx_exec_path),"timeout %i %s/img2dispmanx -file \"%s\" -width FILL -layer 20000  >/dev/null 2>&1",duration,program_path,png_path/*,screen_width,bar_height*/); //parse command line for img2dispmanx
-
+	snprintf(img2dispmanx_exec_path,sizeof(img2dispmanx_exec_path),"%s/img2dispmanx -file \"%s\" -width FILL -layer 20000 -timeout %d  >/dev/null 2>&1",program_path,png_path,duration); //parse command line for img2dispmanx
 	snprintf(icon_overheat_max_exec_path,sizeof(icon_overheat_max_exec_path),"%s/img2dispmanx -file \"%s/img/cpu-overheat-max.png\" -x 10 -y 60 -width 64 -layer 20002 -timeout 5 >/dev/null 2>&1 &",program_path,program_path); //parse command line for img2dispmanx
 	snprintf(icon_overheat_warn_exec_path,sizeof(icon_overheat_warn_exec_path),"%s/img2dispmanx -file \"%s/img/cpu-overheat-warning.png\" -x 10 -y 60 -width 64 -layer 20001 -timeout 5 >/dev/null 2>&1 &",program_path,program_path); //parse command line for img2dispmanx
-	
 	if(gpio_lowbatpin>-1){snprintf(icon_lowbat_exec_path,sizeof(icon_lowbat_exec_path),"%s/img2dispmanx -file \"%s/img/low-battery.png\" -x 80 -y 60 -width 64 -layer 20001 -timeout 5 >/dev/null 2>&1 &",program_path,program_path);} //parse command line for img2dispmanx
-
-
-
+	
 	while(true){
+		tmp_time=time(NULL);
 		
 		chdir(gpio_path); //change directory to gpio sysfs
 		temp_filehandle = fopen("value","r"); fgets(gpio_buffer,sizeof(gpio_buffer),temp_filehandle); fclose(temp_filehandle); //read gpio value
 		gpio_value=atoi(gpio_buffer); //parse gpio value
-		if((gpio_value==0&&(!gpio_activelow&&!gpio_reverselogic||gpio_activelow&&gpio_reverselogic))||(gpio_value==1&&(gpio_activelow&&!gpio_reverselogic||!gpio_activelow&&gpio_reverselogic))){ //gpio button pressed
+		if((tmp_time-img2dispmanx_start)>duration && ((gpio_value==0&&(!gpio_activelow&&!gpio_reverselogic||gpio_activelow&&gpio_reverselogic))||(gpio_value==1&&(gpio_activelow&&!gpio_reverselogic||!gpio_activelow&&gpio_reverselogic)))){ //gpio button pressed
+			img2dispmanx_start=tmp_time;
 			chdir(program_path); //change directory
-			system(img2dispmanx_exec_path); //display overlay, blocking
+			system(img2dispmanx_exec_path); //display overlay, non blocking
 		}
-		
 		
 		if(gpio_lowbatpin>-1){ //low battery enable
 			chdir(gpio_lowbatpath); //change directory to gpio sysfs
@@ -202,10 +176,9 @@ int main(int argc, char *argv[]){
 			gpio_lowbatvalue=atoi(gpio_buffer); //parse gpio value
 			if((gpio_lowbatvalue==0&&(!gpio_lowbatactivelow&&!gpio_lowbatreverselogic||gpio_lowbatactivelow&&gpio_lowbatreverselogic))||(gpio_lowbatvalue==1&&(gpio_lowbatactivelow&&!gpio_lowbatreverselogic||!gpio_lowbatactivelow&&gpio_lowbatreverselogic))){ //gpio button pressed
 				chdir(program_path); //change directory
-				system(icon_lowbat_exec_path); //display overlay, non blocking
+				system(icon_lowbat_exec_path); //display overlay, blocking
 			}
 		}
-		
 		
 		//read rpi temp value
 		//temp_filehandle = fopen("/home/temp","r");
@@ -213,14 +186,13 @@ int main(int argc, char *argv[]){
 		fscanf(temp_filehandle, "%i", &rpi_cpu_temp);
 		fclose(temp_filehandle);
 		
-		tmp_time=time(NULL);
-		if((tmp_time - icon_overheat_warn_start)>5 && rpi_cpu_temp>=80000 && rpi_cpu_temp<85000){ //low overheat
+		if((tmp_time-icon_overheat_warn_start)>5 && rpi_cpu_temp>=80000 && rpi_cpu_temp<85000){ //low overheat
 			icon_overheat_warn_start=tmp_time;
 			chdir(program_path); //change directory
 			system(icon_overheat_warn_exec_path); //display overheat overlay, non blocking
 		}
 		
-		if((tmp_time - icon_overheat_max_start)>5 && rpi_cpu_temp>=85000){ //hot overheat
+		if((tmp_time-icon_overheat_max_start)>5 && rpi_cpu_temp>=85000){ //hot overheat
 			icon_overheat_max_start=tmp_time;
 			chdir(program_path); //change directory
 			system(icon_overheat_max_exec_path); //display overheat overlay, non blocking
@@ -228,8 +200,6 @@ int main(int argc, char *argv[]){
 		
 		usleep(gpio_interval*1000); //sleep
 	}
-	
-	
 	
 	return(0);
 }
