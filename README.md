@@ -42,6 +42,7 @@ nns-overlay-deamon:
 - 0.1c : Implement img2dispmanx to avoid use of ffmpeg and omxplayer, added overheat icon.
 - 0.1d : Added low battery icon (gpio input if set using -lowbatpin, plus use -lowbatreverselogic if reversed logic).
 - 0.1e : Adapt program to updated img2dispmanx, No more need to set width and height.
+- 0.1f : Now fully work in non blocking mode.
 
 # Provided scripts :
 - compile.sh : Compile all cpp files. Require libgd-dev, zlib1g-dev, libfreetype6-dev, libpng-dev, libjpeg-dev.
