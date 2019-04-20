@@ -3,7 +3,7 @@ NNS @ 2018
 info2png
 It create a PNG/log file contening CPU load and temperature, Wifi link speed and time, Battery voltage is optional.
 */
-const char programversion[]="0.1j"; //program version
+const char programversion[]="0.1k"; //program version
 
 
 #include "gd.h"							//libgd
@@ -129,7 +129,8 @@ char i2c_buffer[10]={0};				//i2c data buffer
 
 //ADC variables
 float adc_vref=-1;								//in volt, vdd of the adc chip
-int adc_resolution=4096;						//256:8bits, 1024:10bits, 4096:12bits (default), 65535:16bits
+int adc_resolution=4096;					//256:8bits, 1024:10bits, 4096:12bits (default), 65535:16bits
+float adc_offset=0.;							//in volt, adc error offset
 int divider_r1=0, divider_r2=0;		//resistor divider value in ohm or kohm, check show_usage(void) for infomations
 int adc_raw_value=0;							//adc step value
 int adc_read_retry=0;							//adc reading retry if failure
@@ -247,13 +248,14 @@ int battery_percent=-1;				//battery percentage
 void show_usage(void){
 	printf(
 "Version: %s\n"
-"Example with battery: ./info2png -i2cbus \"/dev/i2c-1\" -i2caddress 0x4d -adcvref 3.65 -adcres 4096 -r1value 91 -r2value 220 -vbatlow 3.5 -vbatlogging -width 304 -height 10 -o \"/dev/shm\"\n"
+"Example with battery: ./info2png -i2cbus \"/dev/i2c-1\" -i2caddress 0x4d -adcvref 3.65 -adcres 4096 -adcoffset 0.1 -r1value 91 -r2value 220 -vbatlow 3.5 -vbatlogging -width 304 -height 10 -o \"/dev/shm\"\n"
 "Example without battery: ./info2png -width 304 -height 10 -o \"/dev/shm\"\n"
 "Options:\n"
 "\t-i2cbus, path to i2c bus device [Optional, needed only for battery voltage monitoring]\n"
 "\t-i2caddress, i2c device adress, found via 'i2cdetect' [Optional, needed only for battery voltage monitoring]\n"
 "\t-adcvref, in volt, vref of the adc chip [Optional, needed only for battery voltage monitoring]\n"
 "\t-adcres, ADC resolution: 256=8bits, 1024=10bits, 4096=12bits (default), 65535=16bits [Optional, needed only for battery voltage monitoring]\n"
+"\t-adcoffset, in volt, adc chip error offset voltage, can be positive or negative [Optional]\n"
 "\t-r1value, in ohm [Optional, used for battery voltage, disable resistor divider if not set]\n"
 "\t-r2value, in ohm [Optional, used for battery voltage, disable resistor divider if not set]\n"
 "\t-vbatlow, in volt, low battery voltage to set text in red color [Optional, used for battery voltage monitoring]\n"
@@ -288,6 +290,7 @@ int main(int argc, char* argv[]){
 		}else if(strcmp(argv[i],"-pca9633adress")==0){sscanf(argv[i+1], "%x", &backlight_i2c_address); backlight_set=true;
 		}else if(strcmp(argv[i],"-adcvref")==0){adc_vref=atof(argv[i+1]);
 		}else if(strcmp(argv[i],"-adcres")==0){adc_resolution=atoi(argv[i+1]);
+		}else if(strcmp(argv[i],"-adcoffset")==0){adc_offset=atof(argv[i+1]);
 		}else if(strcmp(argv[i],"-r1value")==0){divider_r1=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-r2value")==0){divider_r2=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-vbatlow")==0){vbatlow_value=atof(argv[i+1]);
@@ -366,6 +369,7 @@ int main(int argc, char* argv[]){
 							if(vbat_value<1){printf("info2png : Warning, voltage read from ADC chip < 1 volt, Probing failed\n");
 							}else{ //success
 								battery_enabled=true; //battery voltage read success
+								vbat_value+=adc_offset; //add adc chip error offset
 								temp_filehandle=fopen("vbat.log","wb"); fprintf(temp_filehandle,"%.3f",vbat_value); fclose(temp_filehandle); //write log file
 								if(battery_log_enabled){ //cumulative cumulative log file
 									temp_filehandle=fopen("/proc/uptime","r"); fscanf(temp_filehandle,"%u",&uptime_value); fclose(temp_filehandle); //get system uptime
