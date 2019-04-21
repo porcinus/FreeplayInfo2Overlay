@@ -2,7 +2,7 @@
 
 These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform with L2R2 addon board.
 
-- info2png : Output battery voltage and try to predict it's level if ADC data provided , cpu load and temperature, wifi link speed (if detected) and system time. Depending on arguments passed, can generate a png file, a log containing battery voltage.
+- info2png : Output battery voltage and try to predict it's level if ADC data provided (require MCP3021 or MCP3221 ADC chip) , CPU load and temperature, wifi link speed or IP (if detected), backlight value (if PCA9633 is set) and system time. Depending on arguments passed, can generate a png file, a log containing battery voltage.
 
 - png2fb16 : Copy a png file to a 16 bits framebuffer, to use aside of info2png (deprecated, related parts in archive folder).
 
@@ -15,8 +15,7 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 Planned upcoming things.
 
 # History
-
-info2png:
+### info2png:
 - 0.1a : Initial release.
 - 0.1b : Add a logging system for plot, implement srt subtitle file generation for omxplayer.
 - 0.1c : Removed srt subtitle implement, Various bugfix.
@@ -29,15 +28,15 @@ info2png:
 - 0.1j : Can monitor PCA9633 pwm value if i2c adress provided via -pca9633adress argument. Can now detect rfkill state of each wireless device to notify user if in "Airplane Mode".
 - 0.1k : Adding -adcoffset argument to set ADC chip error offset, this value can be positive or negative, it is apply to the computed result, not the raw analog reading. Updated CM3 battery curve.
 
-png2fb16 (deprecated, related parts in archive folder):
+### png2fb16 (deprecated, related parts in archive folder):
 - 0.1a : Initial release.
 - 0.1b : Bugfix.
 
-img2dispmanx:
+### img2dispmanx:
 - 0.1a : Initial release.
 - 0.1b : width, height can be set to FILL to fill screen size.
 
-nns-overlay-deamon:
+### nns-overlay-deamon:
 - 0.1a : Initial release.
 - 0.1b : Implement ffmpeg and omxplayer to display overlay.
 - 0.1c : Implement img2dispmanx to avoid use of ffmpeg and omxplayer, added overheat icon.
@@ -87,19 +86,17 @@ To add this as a item in Retropie menu in EmulationStation:
  - Restart EmulationStation.
  - At this point you shoul be able to see the new item in Retropie menu.
  - Re-enable gamelist update in EmulationStation setting.
- 
-# Scripts don't work
+
+# Issues
+### Scripts don't work
 Don't miss to chmod all .sh files in the folder : chmod 0755 **/*.sh
 
-# Overlay is displayed when gpio pin 'not pressed'
+### Overlay is displayed when gpio pin 'not pressed'
 Add argument ' -reverselogic' to nns-overlay-deamon run script line.
 
-# Overlay is displayed low battery icon when low battery gpio pin 'not trigger'
+### Overlay is displayed low battery icon when low battery gpio pin 'not trigger'
 Add argument ' -lowbatreverselogic' to nns-overlay-deamon run script line.
 
-# Overlay ADC settings are good but battery voltage is a little off
+### Overlay ADC settings are good but battery voltage is a little off
 Sometime ADC chip report a little wrong value because of input impedance or capacitance.
 To correct this, use '-adcoffset', this argument allow a positive or a negative voltage correction directly apply to the computed battery voltage.
-
-# Known issues
-- For some reason, system can fail to keep sh script open resulting on 'sh: 0: Pipe call failed' in var/log/syslog which is really rare, occur only once in my case.
