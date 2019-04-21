@@ -4,7 +4,7 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 
 - info2png : Output battery voltage and try to predict it's level if ADC data provided , cpu load and temperature, wifi link speed (if detected) and system time. Depending on arguments passed, can generate a png file, a log containing battery voltage.
 
-- png2fb16 : Copy a png file to a 16 bits framebuffer, to use aside of info2png, deprecated (will be deleted in the future).
+- png2fb16 : Copy a png file to a 16 bits framebuffer, to use aside of info2png (deprecated, related parts in archive folder).
 
 - nns-overlay-deamon : Use to monitor a gpio button input to display overlay, can monitor a gpio pin to alert user of a low battery state, to be used aside of info2png, ONLY work with dispmanx driver.
 
@@ -29,7 +29,7 @@ info2png:
 - 0.1j : Can monitor PCA9633 pwm value if i2c adress provided via -pca9633adress argument. Can now detect rfkill state of each wireless device to notify user if in "Airplane Mode".
 - 0.1k : Adding -adcoffset argument to set ADC chip error offset, this value can be positive or negative, it is apply to the computed result, not the raw analog reading. Updated CM3 battery curve.
 
-png2fb16 (deprecated, will be deleted in the future):
+png2fb16 (deprecated, related parts in archive folder):
 - 0.1a : Initial release.
 - 0.1b : Bugfix.
 
@@ -47,9 +47,9 @@ nns-overlay-deamon:
 
 # Provided scripts :
 - compile.sh : Compile all cpp files. Require libgd-dev, zlib1g-dev, libfreetype6-dev, libpng-dev, libjpeg-dev.
-- example-framebuffer.sh : Run info2png and png2fb16 (Battery monitoring enabled), deprecated.
+- example-framebuffer.sh : Run info2png and png2fb16 (Battery monitoring enabled), (deprecated, related parts in archive folder).
 - example-overlay.sh : Run info2png and nns-overlay-deamon (Battery monitoring enabled).
-- example-nobattery-framebuffer.sh : Run info2png and png2fb16 (No battery), deprecated.
+- example-nobattery-framebuffer.sh : Run info2png and png2fb16 (No battery), (deprecated, related parts in archive folder).
 - example-nobattery-overlay.sh : Run info2png and nns-overlay-deamon (No battery).
 - example-killall.sh : Use it to kill all instances.
 
@@ -57,9 +57,9 @@ nns-overlay-deamon:
 Note before start: You have to edit wanted .service and .sh files in order to get script work.
 
 Choose right file: 
- - info2framebuffer.sh and info2framebuffer.service : When using ADC to monitor battery voltage, copy informations 16bit framebuffer (/dev/fb1), deprecated.
+ - info2framebuffer.sh and info2framebuffer.service : When using ADC to monitor battery voltage, copy informations 16bit framebuffer (/dev/fb1), (deprecated, related parts in archive folder).
  - info2overlay.sh and info2overlay.service : When using ADC to monitor battery voltage, when specific gpio input is pressed, display picture generated with info2png as a overlay, Note: only work with gl and dispmanx.
- - info2framebuffer-nobattery.sh and info2framebuffer-nobattery.service : Copy some system informations to 16bit framebuffer (/dev/fb1), deprecated.
+ - info2framebuffer-nobattery.sh and info2framebuffer-nobattery.service : Copy some system informations to 16bit framebuffer (/dev/fb1), (deprecated, related parts in archive folder).
  - info2overlay-nobattery.sh and info2overlay-nobattery.service : When specific gpio input is pressed, start omxplayer with a display picture generated with info2png as a overlay, Note: only work with gl and dispmanx.
 
 To install as a service:
@@ -92,10 +92,14 @@ To add this as a item in Retropie menu in EmulationStation:
 Don't miss to chmod all .sh files in the folder : chmod 0755 **/*.sh
 
 # Overlay is displayed when gpio pin 'not pressed'
-Add argument ' -reverselogic' to nns-overlay-deamon run script line
+Add argument ' -reverselogic' to nns-overlay-deamon run script line.
 
 # Overlay is displayed low battery icon when low battery gpio pin 'not trigger'
-Add argument ' -lowbatreverselogic' to nns-overlay-deamon run script line
+Add argument ' -lowbatreverselogic' to nns-overlay-deamon run script line.
+
+# Overlay ADC settings are good but battery voltage is a little off
+Sometime ADC chip report a little wrong value because of input impedance or capacitance.
+To correct this, use '-adcoffset', this argument allow a positive or a negative voltage correction directly apply to the computed battery voltage.
 
 # Known issues
-- For some reason, system can fail to keep sh script open resulting on 'sh: 0: Pipe call failed' in var/log/syslog witch is really rare, occur only once in a month in my case.
+- For some reason, system can fail to keep sh script open resulting on 'sh: 0: Pipe call failed' in var/log/syslog which is really rare, occur only once in my case.
