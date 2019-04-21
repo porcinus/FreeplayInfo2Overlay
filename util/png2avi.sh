@@ -1,1 +1,0 @@
-ffmpeg -loglevel panic -y -loop 1 -i black.png -t 5 -r 5 -vf scale=16:-2,setsar=1:1 -force_key_frames 1 black.avi
