@@ -136,6 +136,15 @@ int adc_raw_value=0;							//adc step value
 int adc_read_retry=0;							//adc reading retry if failure
 
 
+//LC709203F specific
+bool LC709203F_enable = false;
+int LC709203F_address = 0x16;
+
+
+
+
+
+
 //PCA9633 variables
 int backlight_value=-1;
 int backlight_state=-1;
@@ -253,7 +262,7 @@ void show_usage(void){
 "Options:\n"
 "\t-i2cbus, path to i2c bus device [Optional, needed only for battery voltage monitoring]\n"
 "\t-i2caddress, i2c device adress, found via 'i2cdetect' [Optional, needed only for battery voltage monitoring]\n"
-"\t-adcvref, in volt, vref of the adc chip [Optional, needed only for battery voltage monitoring]\n"
+"\t-adcvref, in volt, vref of the adc chip [Optional, needed only for battery voltage monitoring, use '1' if LC709203F]\n"
 "\t-adcres, ADC resolution: 256=8bits, 1024=10bits, 4096=12bits (default), 65535=16bits [Optional, needed only for battery voltage monitoring]\n"
 "\t-adcoffset, in volt, adc chip error offset voltage, can be positive or negative [Optional]\n"
 "\t-r1value, in ohm [Optional, used for battery voltage, disable resistor divider if not set]\n"
@@ -308,7 +317,10 @@ int main(int argc, char* argv[]){
 	
 	if(i2c_address<=0||adc_vref<=0||adc_resolution<=0||i2c_bus==NULL){ //user miss some arguments for battery
 		battery_enabled=false; battery_log_enabled=false; printf("info2png : Warning, battery monitoring disable, some arguments needed to get battery data are not set.\n");
-	}else{battery_set=true;} //all informations are set for battery probe, use in case of read failure to retry
+	}else{
+		battery_set=true;
+		if(i2c_address==LC709203F_address){LC709203F_enable=true;}
+	} //all informations are set for battery probe, use in case of read failure to retry
 	
 	if(freeplaycfg_path!=NULL){ //freeplaycfg path set, try to read the config file
 		printf("info2png : freeplaycfg set, try to get viewport info\n");
@@ -350,7 +362,7 @@ int main(int argc, char* argv[]){
 		
 		//-----------------------------Start of I2C part
 		if(battery_set){ //all need for battery monitoring is set
-			adc_read_retry=0; vbat_value=0; //reset variables
+			adc_read_retry=0; vbat_value=0; battery_percent=-1; //reset variables
 			battery_enabled=false; //battery not enable by default
 			while(adc_read_retry<3){ //use a loop in case of reading failure
 				if((i2c_handle=open(i2c_bus,O_RDWR))<0){ //open i2c bus
@@ -360,21 +372,39 @@ int main(int argc, char* argv[]){
 					if(ioctl(i2c_handle,I2C_SLAVE,i2c_address)<0){ //access i2c device, allow retry if failed
 						printf("info2png : Failed to access I2C device : %04x, retry in 1sec\n",i2c_address);
 					}else{ //success
-						if(read(i2c_handle,i2c_buffer,2)!=2){ //start reading data from i2c device, allow retry if failed
-							printf("info2png : Failed to read data from I2C device : %04x, retry in 1sec\n",i2c_address);
-						}else{ //success
-							adc_raw_value=(i2c_buffer[0]<<8)|(i2c_buffer[1]&0xff); //combine buffer bytes into integer
-							if(resistor_divider_enabled){vbat_value=adc_raw_value*(float)(adc_vref/adc_resolution)/(float)(divider_r2/(float)(divider_r1+divider_r2)); //compute battery voltage with resistor divider
-							}else{vbat_value=adc_raw_value*(float)(adc_vref/adc_resolution);} //compute battery voltage only with adc vref
-							if(vbat_value<1){printf("info2png : Warning, voltage read from ADC chip < 1 volt, Probing failed\n");
+						if(LC709203F_enable){ //LC709203F
+							i2c_buffer[0]=0x09; //Cell Voltage register
+							write(i2c_handle,i2c_buffer,1); //write config
+							usleep(1000); //1msec
+							if(read(i2c_handle,i2c_buffer,2)!=2){printf("info2png : Failed to read Cell Voltage from I2C device : %04x, retry in 1sec\n",i2c_address);
 							}else{ //success
-								battery_enabled=true; //battery voltage read success
-								vbat_value+=adc_offset; //add adc chip error offset
-								temp_filehandle=fopen("vbat.log","wb"); fprintf(temp_filehandle,"%.3f",vbat_value); fclose(temp_filehandle); //write log file
-								if(battery_log_enabled){ //cumulative cumulative log file
-									temp_filehandle=fopen("/proc/uptime","r"); fscanf(temp_filehandle,"%u",&uptime_value); fclose(temp_filehandle); //get system uptime
-									temp_filehandle=fopen("vbat-start.log","a+"); fprintf(temp_filehandle,"%u;%.3f\n",uptime_value,vbat_value); fclose(temp_filehandle); //write cumulative log file
-								}
+								adc_raw_value=(i2c_buffer[0]<<8)|(i2c_buffer[1]&0xff); //combine buffer bytes into integer
+								vbat_value=(float)(adc_raw_value)/1000; //compute battery voltage
+							}
+							
+							i2c_buffer[0]=0x0D; //RSOC register
+							write(i2c_handle,i2c_buffer,1); //write config
+							usleep(1000); //1msec
+							if(read(i2c_handle,i2c_buffer,1)!=1){printf("info2png : Failed to RSOC from I2C device : %04x, retry in 1sec\n",i2c_address);
+							}else{battery_percent=(int)i2c_buffer[0];} //success, RSOC
+						}else{ //MCP3021
+							if(read(i2c_handle,i2c_buffer,2)!=2){printf("info2png : Failed to read data from I2C device : %04x, retry in 1sec\n",i2c_address);
+							}else{ //success
+								adc_raw_value=(i2c_buffer[0]<<8)|(i2c_buffer[1]&0xff); //combine buffer bytes into integer
+								if(resistor_divider_enabled){vbat_value=adc_raw_value*(float)(adc_vref/adc_resolution)/(float)(divider_r2/(float)(divider_r1+divider_r2)); //compute battery voltage with resistor divider
+								}else{vbat_value=adc_raw_value*(float)(adc_vref/adc_resolution);} //compute battery voltage only with adc vref
+							}
+						}
+						
+						if(vbat_value<1){printf("info2png : Warning, voltage read from ADC chip < 1 volt, Probing failed\n");
+						}else if(battery_percent<0 && LC709203F_enable){printf("info2png : Warning, RSOC < 0%, Probing failed\n");
+						}else{ //success
+							battery_enabled=true; //battery voltage read success
+							vbat_value+=adc_offset; //add adc chip error offset
+							temp_filehandle=fopen("vbat.log","wb"); fprintf(temp_filehandle,"%.3f",vbat_value); fclose(temp_filehandle); //write log file
+							if(battery_log_enabled){ //cumulative cumulative log file
+								temp_filehandle=fopen("/proc/uptime","r"); fscanf(temp_filehandle,"%u",&uptime_value); fclose(temp_filehandle); //get system uptime
+								temp_filehandle=fopen("vbat-start.log","a+"); fprintf(temp_filehandle,"%u;%.3f\n",uptime_value,vbat_value); fclose(temp_filehandle); //write cumulative log file
 							}
 						}
 					}
@@ -518,7 +548,7 @@ int main(int argc, char* argv[]){
 			if(battery_enabled){ //battery voltage render
 				if(vbatlow_value<0){gd_col_text=gd_col_green; //low battery voltage not set, set color to green
 				}else{gd_col_text=rgbcolorstep(vbat_value,vbatlow_value,4.2,(int)0x00ff0000,(int)0x0000ff00);} //compute int color
-				battery_percent=nns_get_battery_percentage((int)(vbat_value*1000)); //try to get battery percentage
+				if(!LC709203F_enable){battery_percent=nns_get_battery_percentage((int)(vbat_value*1000));} //try to get battery percentage
 				gd_tmp_charcount=sprintf(gd_chararray,"%d%%/%.2fv",battery_percent,vbat_value); //prepare char array to render
 				if(!wifi_enabled&&!time_enabled){ //place battery on right side if no wifi and no time
 					gd_x_current=gd_image_w-gd_char_w-9-gd_tmp_charcount*gd_char_w;
