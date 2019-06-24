@@ -3,7 +3,7 @@ NNS @ 2018
 info2png
 It create a PNG/log file contening CPU load and temperature, Wifi link speed and time, Battery voltage is optional.
 */
-const char programversion[]="0.1k"; //program version
+const char programversion[]="0.2a"; //program version
 
 
 #include "gd.h"							//libgd
@@ -20,24 +20,9 @@ const char programversion[]="0.1k"; //program version
 #include <math.h>						//math
 #include <dirent.h>  				//dir
 
-#include "battery_cm3.h"		//battery data for the Freeplay CM3 platform
 
 
 
-
-int vbat_smooth_value[5];	//array to store last smoothed data
-bool vbat_smooth_init=false;	//array initialized?
-
-int nns_get_battery_percentage(int vbat){
-	int i;
-	if(!vbat_smooth_init){vbat_smooth_value[0]=vbat_smooth_value[1]=vbat_smooth_value[2]=vbat_smooth_value[3]=vbat;vbat_smooth_init=true;} //initialize array if not already done
-	vbat=(vbat+vbat_smooth_value[3]+vbat_smooth_value[2]+vbat_smooth_value[1]+vbat_smooth_value[0])/5; //smoothed value
-	for(i=0;i<3;i++){vbat_smooth_value[i]=vbat_smooth_value[i+1];} vbat_smooth_value[3]=vbat; //shift array
-	if(vbat<battery_percentage[0]){return 0;} //lower than min value, 0%
-	if(vbat>=battery_percentage[100]){return 100;} //higher than max value, 100%
-	for(i=0;i<100;i++){if(vbat>=battery_percentage[i]&&vbat<battery_percentage[i+1]){return i;}} //return the value
-	return -1; //oups
-}
 
 float nns_map_float(float x,float in_min,float in_max,float out_min,float out_max){
   if(x<in_min){return out_min;}
@@ -97,14 +82,12 @@ int rgbcolorstep(float x,float in_min,float in_max,int color_min,int color_max){
  
 
 //General variables
-char *data_output_path;								//path where output final data
-char *freeplaycfg_path;								//full path like /boot/freeplayfbcp.cfg
+char data_output_path[PATH_MAX];			//path where output final data
+char freeplaycfg_path[PATH_MAX];			//full path like /boot/freeplayfbcp.cfg
+char vbat_path[PATH_MAX];							//vbat filename
 int update_interval=-1;								//data output interval
 FILE *temp_filehandle;								//file handle to get cpu temp/usage
 bool battery_enabled=true;						//battery probe boolean
-bool resistor_divider_enabled=true;		//battery probe boolean
-bool battery_set=false;								//all informations are set for battery probe boolean
-bool battery_log_enabled=false;				//battery log from start boolean
 bool png_enabled=true;								//png output boolean
 bool wifi_enabled=false;							//wifi boolean
 bool wifi_showip=false;								//ip address instead of link speed
@@ -120,20 +103,14 @@ char cfg_buf[32];											//config read buffer
 
 
 //I2C variables
-char *i2c_bus;									//path to i2c bus
-int i2c_address=-1;							//i2c device adress, found via 'i2cdetect'
+char i2c_bus[PATH_MAX];									//path to i2c bus
 int backlight_i2c_address=-1;		//PCA9633 i2c adress, found via 'i2cdetect'
 int i2c_handle;									//i2c handle io
 char i2c_buffer[10]={0};				//i2c data buffer
 
 
-//ADC variables
-float adc_vref=-1;								//in volt, vdd of the adc chip
-int adc_resolution=4096;					//256:8bits, 1024:10bits, 4096:12bits (default), 65535:16bits
-float adc_offset=0.;							//in volt, adc error offset
-int divider_r1=0, divider_r2=0;		//resistor divider value in ohm or kohm, check show_usage(void) for infomations
-int adc_raw_value=0;							//adc step value
-int adc_read_retry=0;							//adc reading retry if failure
+
+
 
 
 //PCA9633 variables
@@ -239,8 +216,8 @@ tm *ltime; 												//localtime object
 
 
 //Battery variables
-float vbat_value=0.;					//battery voltage, used as backup if read fail
-float vbatlow_value=-1;				//battery low voltage
+float vbat_value=-1.;					//battery voltage, used as backup if read fail
+float vbatlow_value=3.4;				//battery low voltage
 int battery_percent=-1;				//battery percentage
 
 
@@ -248,18 +225,9 @@ int battery_percent=-1;				//battery percentage
 void show_usage(void){
 	printf(
 "Version: %s\n"
-"Example with battery: ./info2png -i2cbus \"/dev/i2c-1\" -i2caddress 0x4d -adcvref 3.65 -adcres 4096 -adcoffset 0.1 -r1value 91 -r2value 220 -vbatlow 3.5 -vbatlogging -width 304 -height 10 -o \"/dev/shm\"\n"
-"Example without battery: ./info2png -width 304 -height 10 -o \"/dev/shm\"\n"
+"Example : ./info2png -width 304 -height 10 -o \"/dev/shm\"\n"
 "Options:\n"
 "\t-i2cbus, path to i2c bus device [Optional, needed only for battery voltage monitoring]\n"
-"\t-i2caddress, i2c device adress, found via 'i2cdetect' [Optional, needed only for battery voltage monitoring]\n"
-"\t-adcvref, in volt, vref of the adc chip [Optional, needed only for battery voltage monitoring]\n"
-"\t-adcres, ADC resolution: 256=8bits, 1024=10bits, 4096=12bits (default), 65535=16bits [Optional, needed only for battery voltage monitoring]\n"
-"\t-adcoffset, in volt, adc chip error offset voltage, can be positive or negative [Optional]\n"
-"\t-r1value, in ohm [Optional, used for battery voltage, disable resistor divider if not set]\n"
-"\t-r2value, in ohm [Optional, used for battery voltage, disable resistor divider if not set]\n"
-"\t-vbatlow, in volt, low battery voltage to set text in red color [Optional, used for battery voltage monitoring]\n"
-"\t-vbatlogging, enable battery voltage logging, data will be put in 'vbat-start.log', format 'uptime;vbat' [Optional, used for battery voltage monitoring]\n"
 "\t-pca9633adress, [Optional] PCA9633 i2c adress, found via 'i2cdetect'\n"
 "\t-width, in px, width of 'fb_footer.png' [Optional, needed for generate png if path to freeplayfbcp.cfg not provided]\n"
 "\t-height, in px, height of 'fb_footer.png' [Optional, needed for generate png]\n"
@@ -269,13 +237,8 @@ void show_usage(void){
 "\t-uptime, [Optional] force system uptime instead of time, set by default if no RTC chip detected\n"
 "\t-nouptime, [Optional] force time instead of system uptime even if no RTC chip detected\n"
 "\t-freeplaycfg, [Optional] usually \"/boot/freeplayfbcp.cfg\", provide data like screen width\n"
-"\t-o, output folder where 'vbat.log', 'vbat-start.log', 'vbat.srt'  and 'fb_footer.png'\n\n"
-"Resistor divider diagram:\n"
-"\t(Battery) Vin--+\n"
-"\t               R1\n"
-"\t               +-----Vout (ADC)\n"
-"\t               R2\n"
-"\t(Battery) Gnd--+-----Gnd (Avoid if battery power ADC chip)\n"
+"\t-vbatpath, [Optional] usually \"/dev/shm/vbat.log\", provide battery data\n"
+"\t-o, output folder for 'fb_footer.png'\n\n"
 ,programversion);
 	
 }
@@ -283,18 +246,14 @@ void show_usage(void){
 int main(int argc, char* argv[]){
 	if(argc<3){show_usage();return 1;} //wrong arguments count
 	
+	strcpy(data_output_path,"/dev/shm/"); //init
+	strcpy(freeplaycfg_path,"/boot/freeplayfbcp.cfg"); //init
+	strcpy(vbat_path,"/dev/shm/vbat.log"); //init
+	
 	for(int i=1;i<argc;++i){ //argument to variable
 		if(strcmp(argv[i],"-help")==0){show_usage();return 1;
-		}else if(strcmp(argv[i],"-i2cbus")==0){i2c_bus=(char*)argv[i+1]; if(access(i2c_bus,R_OK)!=0){printf("info2png : Failed, %s not readable\n",i2c_bus);return 1;}
-		}else if(strcmp(argv[i],"-i2caddress")==0){sscanf(argv[i+1], "%x", &i2c_address);
+		}else if(strcmp(argv[i],"-i2cbus")==0){strcpy(i2c_bus,argv[i+1]); if(access(i2c_bus,R_OK)!=0){printf("info2png : Failed, %s not readable\n",i2c_bus);return 1;}
 		}else if(strcmp(argv[i],"-pca9633adress")==0){sscanf(argv[i+1], "%x", &backlight_i2c_address); backlight_set=true;
-		}else if(strcmp(argv[i],"-adcvref")==0){adc_vref=atof(argv[i+1]);
-		}else if(strcmp(argv[i],"-adcres")==0){adc_resolution=atoi(argv[i+1]);
-		}else if(strcmp(argv[i],"-adcoffset")==0){adc_offset=atof(argv[i+1]);
-		}else if(strcmp(argv[i],"-r1value")==0){divider_r1=atoi(argv[i+1]);
-		}else if(strcmp(argv[i],"-r2value")==0){divider_r2=atoi(argv[i+1]);
-		}else if(strcmp(argv[i],"-vbatlow")==0){vbatlow_value=atof(argv[i+1]);
-		}else if(strcmp(argv[i],"-vbatlogging")==0){battery_log_enabled=true;
 		}else if(strcmp(argv[i],"-width")==0){gd_image_w=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-height")==0){gd_image_h=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-interval")==0){update_interval=atoi(argv[i+1]);
@@ -302,13 +261,10 @@ int main(int argc, char* argv[]){
 		}else if(strcmp(argv[i],"-notime")==0){time_enabled=false;
 		}else if(strcmp(argv[i],"-uptime")==0){uptime_enabled=true;
 		}else if(strcmp(argv[i],"-nouptime")==0){time_force_enabled=true;
-		}else if(strcmp(argv[i],"-freeplaycfg")==0){freeplaycfg_path=(char*)argv[i+1]; if(access(freeplaycfg_path,R_OK)!=0){printf("info2png : Failed, %s not readable\n",freeplaycfg_path);return 1;}
-		}else if(strcmp(argv[i],"-o")==0){data_output_path=(char*)argv[i+1]; if(access(data_output_path,W_OK)!=0){printf("info2png : Failed, %s not writable\n",data_output_path);return 1;}}
+		}else if(strcmp(argv[i],"-vbatpath")==0){strcpy(vbat_path,argv[i+1]);
+		}else if(strcmp(argv[i],"-freeplaycfg")==0){strcpy(freeplaycfg_path,argv[i+1]); if(access(freeplaycfg_path,R_OK)!=0){printf("info2png : Failed, %s not readable\n",freeplaycfg_path);return 1;}
+		}else if(strcmp(argv[i],"-o")==0){strcpy(data_output_path,argv[i+1]); if(access(data_output_path,W_OK)!=0){printf("info2png : Failed, %s not writable\n",data_output_path);return 1;}}
 	}
-	
-	if(i2c_address<=0||adc_vref<=0||adc_resolution<=0||i2c_bus==NULL){ //user miss some arguments for battery
-		battery_enabled=false; battery_log_enabled=false; printf("info2png : Warning, battery monitoring disable, some arguments needed to get battery data are not set.\n");
-	}else{battery_set=true;} //all informations are set for battery probe, use in case of read failure to retry
 	
 	if(freeplaycfg_path!=NULL){ //freeplaycfg path set, try to read the config file
 		printf("info2png : freeplaycfg set, try to get viewport info\n");
@@ -326,14 +282,10 @@ int main(int argc, char* argv[]){
 		fclose(temp_filehandle); //close handle
 	}
 	
-	if((divider_r1==0||divider_r2==0)&&battery_set){resistor_divider_enabled=false;printf("info2png : Warning, ADC resistor divider compute disable, resistor values are not set.\n");} //user miss some arguments for resistor values
-	
 	if(data_output_path==NULL){printf("info2png : Failed, missing output path\n");show_usage();return 1;} //user miss some needed arguments
 	if(gd_image_w<1||gd_image_h<1){printf("info2png : Warning, PNG output disable, missing image width or height.\n");png_enabled=false;} //no png output
-	if(vbatlow_value<0&&battery_enabled&&png_enabled){printf("info2png : Warning, low battery voltage not set, text color will stay unchanged\n");} //user miss some arguments for battery
 	
 	if(update_interval<1){printf("info2png : Warning, wrong update interval set, setting it to 15sec\n");update_interval=15;} //wrong interval
-	if(battery_log_enabled&&battery_set){printf("info2png : Battery logging enable\n");}
 	
 	if(access("/sbin/iw",F_OK)!=0){printf("info2png : Warning, WIFI link speed detection require 'iw' software\n");}
 	
@@ -348,50 +300,16 @@ int main(int argc, char* argv[]){
 	while(true){
 		chdir(data_output_path);							//change directory to output path
 		
-		//-----------------------------Start of I2C part
-		if(battery_set){ //all need for battery monitoring is set
-			adc_read_retry=0; vbat_value=0; //reset variables
-			battery_enabled=false; //battery not enable by default
-			while(adc_read_retry<3){ //use a loop in case of reading failure
-				if((i2c_handle=open(i2c_bus,O_RDWR))<0){ //open i2c bus
-					printf("info2png : Failed to open the I2C bus : %s\n",i2c_bus);
-					adc_read_retry=3; //no need to retry since failed to open I2C bus itself
-				}else{
-					if(ioctl(i2c_handle,I2C_SLAVE,i2c_address)<0){ //access i2c device, allow retry if failed
-						printf("info2png : Failed to access I2C device : %04x, retry in 1sec\n",i2c_address);
-					}else{ //success
-						if(read(i2c_handle,i2c_buffer,2)!=2){ //start reading data from i2c device, allow retry if failed
-							printf("info2png : Failed to read data from I2C device : %04x, retry in 1sec\n",i2c_address);
-						}else{ //success
-							adc_raw_value=(i2c_buffer[0]<<8)|(i2c_buffer[1]&0xff); //combine buffer bytes into integer
-							if(resistor_divider_enabled){vbat_value=adc_raw_value*(float)(adc_vref/adc_resolution)/(float)(divider_r2/(float)(divider_r1+divider_r2)); //compute battery voltage with resistor divider
-							}else{vbat_value=adc_raw_value*(float)(adc_vref/adc_resolution);} //compute battery voltage only with adc vref
-							if(vbat_value<1){printf("info2png : Warning, voltage read from ADC chip < 1 volt, Probing failed\n");
-							}else{ //success
-								battery_enabled=true; //battery voltage read success
-								vbat_value+=adc_offset; //add adc chip error offset
-								temp_filehandle=fopen("vbat.log","wb"); fprintf(temp_filehandle,"%.3f",vbat_value); fclose(temp_filehandle); //write log file
-								if(battery_log_enabled){ //cumulative cumulative log file
-									temp_filehandle=fopen("/proc/uptime","r"); fscanf(temp_filehandle,"%u",&uptime_value); fclose(temp_filehandle); //get system uptime
-									temp_filehandle=fopen("vbat-start.log","a+"); fprintf(temp_filehandle,"%u;%.3f\n",uptime_value,vbat_value); fclose(temp_filehandle); //write cumulative log file
-								}
-							}
-						}
-					}
-					close(i2c_handle);
-				}
-				
-				if(!battery_enabled){
-					adc_read_retry++; //something failed at one point so retry
-					if(adc_read_retry>2){printf("info2png : Warning, voltage read from ADC chip fail 3 times, skipping until next update\n");}else{sleep(1);}
-				}else{adc_read_retry=3;} //data read with success, no retry
-			}
-		}
-		
-		
 		//-----------------------------Start of GD part
 		if(png_enabled){ //png output enable
-			
+			if(access(vbat_path,R_OK)!=0){battery_enabled=false;
+			}else{
+				temp_filehandle=fopen(vbat_path,"r"); //open file handle
+				fscanf(temp_filehandle,"%f;%d",&vbat_value,&battery_percent); //parse 
+				fclose(temp_filehandle); //close file handle
+				if(vbat_value<0||battery_percent<0){battery_enabled=false;
+				}else{battery_enabled=true;}
+			}
 			
 			rfkill_enabled=false; rfkill_value=0; rfkill_count=0; //reset rfkill variables
 			rfkill_dir_handle=opendir("/sys/class/rfkill"); //open dir handle
@@ -518,8 +436,9 @@ int main(int argc, char* argv[]){
 			if(battery_enabled){ //battery voltage render
 				if(vbatlow_value<0){gd_col_text=gd_col_green; //low battery voltage not set, set color to green
 				}else{gd_col_text=rgbcolorstep(vbat_value,vbatlow_value,4.2,(int)0x00ff0000,(int)0x0000ff00);} //compute int color
-				battery_percent=nns_get_battery_percentage((int)(vbat_value*1000)); //try to get battery percentage
 				gd_tmp_charcount=sprintf(gd_chararray,"%d%%/%.2fv",battery_percent,vbat_value); //prepare char array to render
+				
+				//printf("%d%%/%.2fv\n",battery_percent,vbat_value);
 				if(!wifi_enabled&&!time_enabled){ //place battery on right side if no wifi and no time
 					gd_x_current=gd_image_w-gd_char_w-9-gd_tmp_charcount*gd_char_w;
 					gd_x_last=gd_x_current-gd_char_w-1;
