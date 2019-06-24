@@ -48,9 +48,9 @@ Planned upcoming things.
 # Provided scripts :
 - compile.sh : Compile all cpp files. Require libgd-dev, zlib1g-dev, libfreetype6-dev, libpng-dev, libjpeg-dev.
 - example-framebuffer.sh : Run info2png and png2fb16 (Battery monitoring enabled), (deprecated, related parts in archive folder).
-- example-overlay.sh : Run info2png and nns-overlay-deamon (Battery monitoring enabled).
+- example-overlay.sh : Run info2png and nns-overlay-deamon (Battery monitoring enabled), (deprecated, related parts in archive folder).
 - example-nobattery-framebuffer.sh : Run info2png and png2fb16 (No battery), (deprecated, related parts in archive folder).
-- example-nobattery-overlay.sh : Run info2png and nns-overlay-deamon (No battery).
+- example-nobattery-overlay.sh : Run info2png and nns-overlay-deamon (No battery), (deprecated, related parts in archive folder).
 - example-killall.sh : Use it to kill all instances.
 
 # Setup as service :
@@ -58,9 +58,9 @@ Note before start: You have to edit wanted .service and .sh files in order to ge
 
 Choose right file: 
  - info2framebuffer.sh and info2framebuffer.service : When using ADC to monitor battery voltage, copy informations 16bit framebuffer (/dev/fb1), (deprecated, related parts in archive folder).
- - info2overlay.sh and info2overlay.service : When using ADC to monitor battery voltage, when specific gpio input is pressed, display picture generated with info2png as a overlay, Note: only work with gl and dispmanx.
+ - info2overlay.sh and info2overlay.service : When using ADC to monitor battery voltage, when specific gpio input is pressed, display picture generated with info2png as a overlay, Note: only work with gl and dispmanx, (deprecated, related parts in archive folder).
  - info2framebuffer-nobattery.sh and info2framebuffer-nobattery.service : Copy some system informations to 16bit framebuffer (/dev/fb1), (deprecated, related parts in archive folder).
- - info2overlay-nobattery.sh and info2overlay-nobattery.service : When specific gpio input is pressed, start omxplayer with a display picture generated with info2png as a overlay, Note: only work with gl and dispmanx.
+ - info2overlay-nobattery.sh and info2overlay-nobattery.service : When specific gpio input is pressed, start omxplayer with a display picture generated with info2png as a overlay, Note: only work with gl and dispmanx, (deprecated, related parts in archive folder).
 
 To install as a service:
 cp [WANTEDSERVICE].service /lib/systemd/system/[WANTEDSERVICE].service ; \
