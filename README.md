@@ -27,6 +27,7 @@ Planned upcoming things.
 - 0.1i : By default, if no RTC chip detected, the software will show system uptime instead of time, this can be disable by using -nouptime. Clock and uptime icons added.
 - 0.1j : Can monitor PCA9633 pwm value if i2c adress provided via -pca9633adress argument. Can now detect rfkill state of each wireless device to notify user if in "Airplane Mode".
 - 0.1k : Adding -adcoffset argument to set ADC chip error offset, this value can be positive or negative, it is apply to the computed result, not the raw analog reading. Updated CM3 battery curve.
+- 0.2a : Major update, battery data stuff moved to https://github.com/porcinus/FreeplayBatteryDaemon
 
 ### png2fb16 (deprecated, related parts in archive folder):
 - 0.1a : Initial release.
@@ -97,6 +98,4 @@ Add argument ' -reverselogic' to nns-overlay-deamon run script line.
 ### Overlay is displayed low battery icon when low battery gpio pin 'not trigger'
 Add argument ' -lowbatreverselogic' to nns-overlay-deamon run script line.
 
-### Overlay ADC settings are good but battery voltage is a little off
-Sometime ADC chip report a little wrong value because of input impedance or capacitance.
-To correct this, use '-adcoffset', this argument allow a positive or a negative voltage correction directly apply to the computed battery voltage.
+
