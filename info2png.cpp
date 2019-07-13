@@ -486,7 +486,7 @@ int main(int argc, char* argv[]){
 			if(cpuload_value<10){gdImageChar(gd_image,gdFontTiny,gd_x_current+gd_char_w,1,0x30,gd_col_gray);} //draw 0 in gray
 			gd_x_current+=gd_tmp_charcount*gd_char_w; //update x position
 			gdImageLine(gd_image,gd_x_current+gd_char_w,1,gd_x_current+gd_char_w,gd_image_h-2,gd_col_darkgray); //draw separator
-			if(!wifi_enabled&&!time_enabled&&!backlight_enadbled&&!rfkill_enabled){ //battery is placed on right side
+			if(!wifi_enabled&&!time_enabled&&!backlight_enabled&&!rfkill_enabled){ //battery is placed on right side
 				gdImageLine(gd_image,gd_x_current+gd_char_w,(gd_image_h/2)-1,gd_x_last,(gd_image_h/2)-1,gd_col_darkgray); //filler
 			}else{gd_x_last=gd_x_current+gd_char_w+1;} //update last x position, used for filler
 			
