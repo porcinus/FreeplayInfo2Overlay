@@ -12,7 +12,7 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 
 # Todo
 
-Planned upcoming things.
+Detect bluetooth devices
 
 # History
 ### info2png:
