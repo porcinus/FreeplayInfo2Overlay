@@ -1,9 +1,9 @@
 /*
-NNS @ 2018
+NNS @ 2019
 info2png
-It create a PNG/log file contening CPU load and temperature, Wifi link speed and time, Battery voltage is optional.
+It create a PNG file contening CPU load and temperature, Wifi link speed, Bluetooth status and time, Battery voltage is optional.
 */
-const char programversion[]="0.2a"; //program version
+const char programversion[]="0.2b"; //program version
 
 
 #include "gd.h"							//libgd
@@ -97,13 +97,14 @@ bool time_force_enabled=false;				//force time instead of uptime
 bool backlight_set=false;							//display backlight info
 bool backlight_enabled=false;					//display backlight info
 bool rfkill_enabled=false;						//rfkill is running
+bool bluetooth_enabled=true;					//hcitool exist on the system
 char cfg_buf[32];											//config read buffer
 
 
 
 
 //I2C variables
-char i2c_bus[PATH_MAX];									//path to i2c bus
+char i2c_bus[PATH_MAX];					//path to i2c bus
 int backlight_i2c_address=-1;		//PCA9633 i2c adress, found via 'i2cdetect'
 int i2c_handle;									//i2c handle io
 char i2c_buffer[10]={0};				//i2c data buffer
@@ -132,7 +133,16 @@ const int gd_char_w=5; 							//gd image char width
 int gd_col_black, gd_col_white, gd_col_gray, gd_col_darkgray, gd_col_darkergray, gd_col_green, gd_col_tmp, gd_col_text; //gd colors
 
 char gd_icons[]={ //custom gd font char array 8x8
-0,0,1,1,1,1,0,0, //char 0 : battery
+0,0,0,0,0,0,0,0, //char 0 : none
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,
+
+0,0,1,1,1,1,0,0, //char 1 : battery
 0,1,1,0,0,1,1,0,
 0,1,0,0,0,0,1,0,
 0,1,1,1,1,1,1,0,
@@ -141,7 +151,7 @@ char gd_icons[]={ //custom gd font char array 8x8
 0,1,0,0,0,0,1,0,
 0,1,1,1,1,1,1,0,
 
-0,0,0,0,0,0,0,0, //char 1 : cpu
+0,0,0,0,0,0,0,0, //char 2 : cpu
 0,1,0,1,0,1,0,0,
 1,1,1,1,1,1,1,0,
 0,1,0,0,0,1,0,0,
@@ -150,7 +160,7 @@ char gd_icons[]={ //custom gd font char array 8x8
 1,1,1,1,1,1,1,0,
 0,1,0,1,0,1,0,0,
 
-0,0,0,0,0,0,0,0, //char 2 : wifi
+0,0,0,0,0,0,0,0, //char 3 : wifi
 0,0,1,0,0,0,0,0,
 0,1,0,1,0,0,0,0,
 0,0,1,0,0,0,1,0,
@@ -159,7 +169,7 @@ char gd_icons[]={ //custom gd font char array 8x8
 0,0,1,0,1,0,1,0,
 0,0,1,0,1,0,1,0,
 
-0,0,1,1,1,1,0,0, //char 3 : clock
+0,0,1,1,1,1,0,0, //char 4 : clock
 0,1,0,0,0,0,1,0,
 1,0,0,1,0,0,0,1,
 1,0,0,1,0,0,0,1,
@@ -168,7 +178,7 @@ char gd_icons[]={ //custom gd font char array 8x8
 0,1,0,0,0,0,1,0,
 0,0,1,1,1,1,0,0,
 
-0,0,0,0,1,0,0,0, //char 4 : uptime
+0,0,0,0,1,0,0,0, //char 5 : uptime
 0,0,0,1,0,1,0,0,
 0,0,1,0,0,0,1,0,
 0,1,0,0,0,0,0,1,
@@ -177,7 +187,7 @@ char gd_icons[]={ //custom gd font char array 8x8
 0,0,0,1,0,1,0,0,
 0,0,0,1,1,1,0,0,
 
-0,0,0,1,1,1,0,0, //char 5 : backlight
+0,0,0,1,1,1,0,0, //char 6 : backlight
 0,0,1,0,0,0,1,0,
 0,1,0,0,0,0,0,1,
 0,1,0,0,1,0,0,1,
@@ -186,20 +196,41 @@ char gd_icons[]={ //custom gd font char array 8x8
 0,0,0,1,0,1,0,0,
 0,0,0,1,1,1,0,0,
 
-0,0,0,0,0,0,0,0, //char 6 : none
+0,0,0,0,0,0,0,0, //char 7 : bluetooth
+0,0,0,0,1,0,0,0,
+0,0,1,0,1,1,0,0,
+0,0,0,1,1,0,1,0,
+0,0,0,0,1,1,0,0,
+0,0,0,1,1,0,1,0,
+0,0,1,0,1,1,0,0,
+0,0,0,0,1,0,0,0,
+
+
+0,0,0,0,0,0,0,0, //char 8 : Mbps0
+1,0,0,1,0,1,0,0,
+1,1,1,1,0,1,0,0,
+1,0,0,1,0,1,1,1,
+1,0,0,1,0,1,0,1,
+1,0,0,1,0,1,1,1,
 0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,
+
+0,0,0,0,0,0,0,0, //char 9 : Mbps1
 0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0};
-gdFont gd_icons_8x8_font_ref = {7,0,8,8,gd_icons}; //declare custom gd font 8x8
+0,1,1,1,0,1,1,0,
+0,1,0,1,0,1,0,1,
+0,1,1,1,0,1,1,0,
+0,1,0,0,0,0,0,0,
+0,1,0,0,0,0,0,0
+};
+
+gdFont gd_icons_8x8_font_ref = {10,0,8,8,gd_icons}; //declare custom gd font 8x8
 gdFontPtr gd_icons_8x8_font = &gd_icons_8x8_font_ref; //pointer to custom gd font
 
 int gd_x_current,gd_x_last,gd_x_wifi; //gd x text position
 int gd_wifi_charcount,gd_tmp_charcount; //gd text char count
-char gd_chararray[26];				//gd string
+char gd_chararray[26];						//gd string
 char gd_wifi_chararray[20];				//wifi string
 int cpu_value=0;									//cpu temp
 long double a[4], b[4];						//use to compute cpu load
@@ -213,11 +244,12 @@ int wifi_signal=0;								//wifi signal
 char pbuffer[20];									//buffer use to read process pipe
 time_t now; 											//current date/time
 tm *ltime; 												//localtime object
+int bluetooth_devices=-1;					//-1:no dongle, devices connected count
 
 
 //Battery variables
 float vbat_value=-1.;					//battery voltage, used as backup if read fail
-float vbatlow_value=3.4;				//battery low voltage
+float vbatlow_value=3.4;			//battery low voltage
 int battery_percent=-1;				//battery percentage
 
 
@@ -288,6 +320,8 @@ int main(int argc, char* argv[]){
 	if(update_interval<1){printf("info2png : Warning, wrong update interval set, setting it to 15sec\n");update_interval=15;} //wrong interval
 	
 	if(access("/sbin/iw",F_OK)!=0){printf("info2png : Warning, WIFI link speed detection require 'iw' software\n");}
+	
+	if(access("/usr/bin/hcitool",F_OK)!=0){printf("info2png : Warning, Bluetooth detection require 'hcitool' software\n");}
 	
 	if(!time_enabled){printf("info2png : Time display disable\n");}
 	if(time_force_enabled){printf("info2png : Use time instead of system uptime\n");uptime_enabled=false;}
@@ -366,9 +400,9 @@ int main(int argc, char* argv[]){
 							}else{ //success
 								backlight_state=i2c_buffer[0]<<6>>6; //LED0 output state control, bitshift to get only LED0
 								backlight_enabled=true;
-								if(backlight_state==0){backlight_value=0; //00 —LED driver x is off
-								}else if(backlight_state==1){backlight_value=100; //01 —LED driver x is fully on
-								}else if(backlight_state==2||backlight_state==3){ //10 —LED driver x controlled through its PWMxregister
+								if(backlight_state==0){backlight_value=0; //00 -LED driver x is off
+								}else if(backlight_state==1){backlight_value=100; //01 -LED driver x is fully on
+								}else if(backlight_state==2||backlight_state==3){ //10 -LED driver x controlled through its PWMxregister
 									i2c_buffer[0]=0x02; //PWM0 register
 									if(write(i2c_handle,i2c_buffer,1)!=1){
 										printf("info2png : PCA9633 : Failed to write data to select PWM0 register\n");
@@ -386,7 +420,7 @@ int main(int argc, char* argv[]){
 			}
 			
 			
-			wifi_enabled=false;
+			wifi_enabled=false; wifi_linkspeed=0; wifi_signal=-1; //reset wifi variables
 			if(!rfkill_enabled){ //if rfkill not detected
 				if(access("/sbin/iw",F_OK)!=-1 && !wifi_showip){ //check if 'iw' is installed for WiFi link speed
 					temp_filehandle=popen("iw dev wlan0 link 2> /dev/null  | sed 's/^[[:space:]]*//g' | sed 's/ //g'", "r"); //open process pipe
@@ -397,7 +431,8 @@ int main(int argc, char* argv[]){
 							}else if(strstr(cfg_buf,"bitrate")!=NULL){ //speed
 								wifi_enabled=true;
 								sscanf(cfg_buf,"%*[^0123456789]%d",&wifi_linkspeed);
-								gd_wifi_charcount=sprintf(gd_wifi_chararray,"%iMBit/s",wifi_linkspeed);
+								//gd_wifi_charcount=sprintf(gd_wifi_chararray,"%iMBit/s",wifi_linkspeed);
+								gd_wifi_charcount=sprintf(gd_wifi_chararray,"%i",wifi_linkspeed);
 							}
 						}
 						pclose(temp_filehandle); //close process pipe
@@ -415,6 +450,29 @@ int main(int argc, char* argv[]){
 				}
 			}
 			
+			
+			bluetooth_enabled=false; bluetooth_devices=-1; //reset bt variables
+			if(!rfkill_enabled){ //if rfkill not detected
+				if(access("/usr/bin/hcitool",F_OK)!=-1){ //check if 'hcitool' is installed
+					temp_filehandle=popen("hciconfig", "r"); //open process pipe
+					if(temp_filehandle!=NULL){ //if process not fail
+						while(fgets(cfg_buf,sizeof(cfg_buf),temp_filehandle)!=NULL){bluetooth_devices++;}	//read line
+						pclose(temp_filehandle); //close process pipe
+						if(bluetooth_devices>0){bluetooth_enabled=true;}
+					}
+					
+					bluetooth_devices=-1; //reset
+					if(bluetooth_enabled){
+						temp_filehandle=popen("hcitool con", "r"); //open process pipe
+						if(temp_filehandle!=NULL){ //if process not fail
+							while(fgets(cfg_buf,sizeof(cfg_buf),temp_filehandle)!=NULL){bluetooth_devices++;}	//read line
+							pclose(temp_filehandle); //close process pipe
+						}
+					}
+				}
+			}
+			if(bluetooth_devices<0){bluetooth_enabled=false;
+			}else if(bluetooth_devices>0){bluetooth_devices++;bluetooth_devices=bluetooth_devices/2;} //2 lines are output for each connection
 			
 			gd_image=gdImageCreateTrueColor(gd_image_w,gd_image_h); //allocate gd image
 			
@@ -435,19 +493,20 @@ int main(int argc, char* argv[]){
 			gd_x_last=gd_image_w; //update x last position
 			if(battery_enabled){ //battery voltage render
 				if(vbatlow_value<0){gd_col_text=gd_col_green; //low battery voltage not set, set color to green
-				}else{gd_col_text=rgbcolorstep(vbat_value,vbatlow_value,4.2,(int)0x00ff0000,(int)0x0000ff00);} //compute int color
-				gd_tmp_charcount=sprintf(gd_chararray,"%d%%/%.2fv",battery_percent,vbat_value); //prepare char array to render
+				}else{gd_col_text=rgbcolorstep(vbat_value,vbatlow_value,3.8,(int)0x00ff0000,(int)0x0000ff00);} //compute int color
 				
-				//printf("%d%%/%.2fv\n",battery_percent,vbat_value);
+				if(battery_percent<15){gd_tmp_charcount=sprintf(gd_chararray,"<%d%%/%.2fv",battery_percent,vbat_value); //low soc, prepare char array to render
+				}else{gd_tmp_charcount=sprintf(gd_chararray,"%d%%/%.2fv",battery_percent,vbat_value);} //normal soc, prepare char array to render
+				
 				if(!wifi_enabled&&!time_enabled){ //place battery on right side if no wifi and no time
 					gd_x_current=gd_image_w-gd_char_w-9-gd_tmp_charcount*gd_char_w;
 					gd_x_last=gd_x_current-gd_char_w-1;
 				}
-				gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current,1,0x00,gd_col_text); //draw battery icon
+				gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current,1,0x01,gd_col_text); //draw battery icon
 				gdImageString(gd_image,gdFontTiny,gd_x_current+9,1,(unsigned char*)gd_chararray,gd_col_text); //print battery info to gd image
 				gd_x_current+=9+gd_tmp_charcount*gd_char_w; //update x position
 				gdImageChar(gd_image,gdFontTiny,gd_x_current-6*gd_char_w,1,0x2F,gd_col_gray); //draw / in gray
-				if(!wifi_enabled&&!time_enabled){
+				if(!bluetooth_enabled&&!wifi_enabled&&!time_enabled){
 					gdImageLine(gd_image,gd_x_last+1,1,gd_x_last+1,gd_image_h-2,gd_col_darkgray); //draw separator
 					gd_x_current=gd_char_w; //update x position to restart on left side
 				}else{
@@ -464,7 +523,7 @@ int main(int argc, char* argv[]){
 			cpu_value=atoi(cpu_buf)/1000; //compute temperature
 			gd_tmp_charcount=sprintf(gd_chararray,"%i°c",cpu_value); //prepare char array to render
 			gd_col_text=rgbcolorstep(cpu_value,50,80,(int)0x0000ff00,(int)0x00ff0000); //compute int color
-			gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current,0,0x01,gd_col_text); //draw cpu icon
+			gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current,0,0x02,gd_col_text); //draw cpu icon
 			gdImageString(gd_image,gdFontTiny,gd_x_current+9,1,(unsigned char*)gd_chararray,gd_col_text); //print cpu temp to gd image
 			gd_x_current+=9+(gd_tmp_charcount+1)*gd_char_w; //update x position
 			gdImageChar(gd_image,gdFontTiny,gd_x_current-gd_char_w,1,0x2F,gd_col_gray); //draw / in gray
@@ -503,8 +562,8 @@ int main(int argc, char* argv[]){
 					gd_tmp_charcount=sprintf(gd_chararray,"%02i:%02i",ltime->tm_hour,ltime->tm_min); //prepare char array to render
 				}
 				gd_x_current-=gd_tmp_charcount*gd_char_w; //update x position
-				if(uptime_enabled){gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-10,1,0x04,gd_col_white); //uptime icon
-				}else{gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-10,1,0x03,gd_col_white);} //clock icon
+				if(uptime_enabled){gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-10,1,0x05,gd_col_white); //uptime icon
+				}else{gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-10,1,0x04,gd_col_white);} //clock icon
 				gdImageLine(gd_image,gd_x_current-gd_char_w-10,1,gd_x_current-gd_char_w-10,gd_image_h-2,gd_col_darkgray); //draw separator
 				gdImageString(gd_image,gdFontTiny,gd_x_current,1,(unsigned char*)gd_chararray,gd_col_white); //print time
 				gd_x_current-=2*gd_char_w-1+10; //update x position
@@ -514,7 +573,7 @@ int main(int argc, char* argv[]){
 			if(backlight_enabled){ //backlight render
 				gd_tmp_charcount=sprintf(gd_chararray,"%i%%",backlight_value); //prepare char array to render
 				gd_x_current-=gd_tmp_charcount*gd_char_w; //update x position
-				gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-9,1,0x05,gd_col_white);
+				gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-9,1,0x06,gd_col_white);
 				gdImageString(gd_image,gdFontTiny,gd_x_current,1,(unsigned char*)gd_chararray,gd_col_white); //print wifi link speed
 				gdImageLine(gd_image,gd_x_current-gd_char_w-9,1,gd_x_current-gd_char_w-9,gd_image_h-2,gd_col_darkgray); //draw separator
 				gd_x_current-=2*gd_char_w-1+9; //update x position
@@ -527,31 +586,48 @@ int main(int argc, char* argv[]){
 				gdImageString(gd_image,gdFontTiny,gd_x_current,1,(unsigned char*)gd_chararray,gd_col_green); //print wifi link speed
 				gdImageLine(gd_image,gd_x_current-gd_char_w,1,gd_x_current-gd_char_w,gd_image_h-2,gd_col_darkgray); //draw separator
 				gd_x_current-=2*gd_char_w-1; //update x position
-			}else if(wifi_enabled||wifi_showip){ //wifi render
-				gd_x_current-=gd_wifi_charcount*gd_char_w; //update x position
-				if(!wifi_showip){ //draw wifi icon with color based on signal 
-					if(vbatlow_value<0){gd_col_text=gd_col_white; //no signal=white
-					}else{gd_col_text=rgbcolorstep(wifi_signal,30,91,(int)0x0000ff00,(int)0x00ff0000);} //compute int color
-					gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-9,0,0x02,gd_col_text);
+			}else{ //wireless render
+				gd_col_text=gd_col_white; //default color
+				if(wifi_enabled||wifi_showip){ //wifi render
+					if(!wifi_showip){ //draw wifi icon with color based on signal 
+						if(wifi_linkspeed>0){gd_x_current-=gd_wifi_charcount*gd_char_w+16;} //update x position, with link speed
+						if(wifi_signal>=0){gd_col_text=rgbcolorstep(wifi_signal,30,91,(int)0x0000ff00,(int)0x00ff0000);} //compute int color
+						gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-9,0,0x03,gd_col_text);
+						if(wifi_linkspeed>0){ //draw link speed
+							gd_col_text=rgbcolorstep(wifi_linkspeed,5,72,(int)0x00ff0000,(int)0x0000ff00); //compute int color
+							gdImageString(gd_image,gdFontTiny,gd_x_current,1,(unsigned char*)gd_wifi_chararray,gd_col_text); //print wifi link speed
+							gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current+gd_wifi_charcount*gd_char_w,2,0x08,gd_col_text); //Mbits first char
+							gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current+gd_wifi_charcount*gd_char_w+8,2,0x09,gd_col_text); //Mbits last char
+						}
+						gd_x_current-=9; //update x position
+					}else{ //show ip
+						gd_x_current-=gd_wifi_charcount*gd_char_w;
+						gdImageString(gd_image,gdFontTiny,gd_x_current,1,(unsigned char*)gd_wifi_chararray,gd_col_text); //print ip
+					}
+					gdImageLine(gd_image,gd_x_current-gd_char_w,1,gd_x_current-gd_char_w,gd_image_h-2,gd_col_darkgray); //draw separator
+					gd_x_current-=2*gd_char_w-1; //update x position
 				}
-				if(wifi_linkspeed<1){gd_col_text=gd_col_white; //no link speed=white
-				}else{gd_col_text=rgbcolorstep(wifi_linkspeed,5,72,(int)0x00ff0000,(int)0x0000ff00);} //compute int color
-				gdImageString(gd_image,gdFontTiny,gd_x_current,1,(unsigned char*)gd_wifi_chararray,gd_col_text); //print wifi link speed
-				if(!wifi_showip){gd_x_current-=9;} //update x position
-				gdImageLine(gd_image,gd_x_current-gd_char_w,1,gd_x_current-gd_char_w,gd_image_h-2,gd_col_darkgray); //draw separator
-				gd_x_current-=2*gd_char_w-1; //update x position
+				
+				if(bluetooth_enabled){ //bt render
+					gd_tmp_charcount=sprintf(gd_chararray,"%d",bluetooth_devices); //prepare char array to render
+					if(bluetooth_devices<1){gd_col_text=gd_col_white; //no device=white
+					}else{gd_col_text=gd_col_green; gd_x_current-=gd_tmp_charcount*gd_char_w;} //device=green, update x position
+					gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-9,0,0x07,gd_col_text);
+					if(bluetooth_devices>0){gdImageString(gd_image,gdFontTiny,gd_x_current,1,(unsigned char*)gd_chararray,gd_col_text);} //print device count
+					gd_x_current-=9; //update x position
+					gdImageLine(gd_image,gd_x_current-gd_char_w,1,gd_x_current-gd_char_w,gd_image_h-2,gd_col_darkgray); //draw separator
+					gd_x_current-=2*gd_char_w-1; //update x position
+				}
 			}
 			
+			if(bluetooth_enabled||wifi_enabled||time_enabled||backlight_enabled||rfkill_enabled){gdImageLine(gd_image,gd_x_current+gd_char_w-1,(gd_image_h/2)-1,gd_x_last,(gd_image_h/2)-1,gd_col_darkgray);} //filler
 			
-			if(wifi_enabled||time_enabled||backlight_enabled||rfkill_enabled){gdImageLine(gd_image,gd_x_current+gd_char_w-1,(gd_image_h/2)-1,gd_x_last,(gd_image_h/2)-1,gd_col_darkgray);} //filler
+			gdImageLine(gd_image,0,gd_image_h-1,gd_image_w,gd_image_h-1,gd_col_gray); //bottom decoration
 			
-			
-			gdImageLine(gd_image,0,gd_image_h-1,gd_image_w,gd_image_h-1,gd_col_gray); 				//bottom decoration
-			
-			temp_filehandle=fopen("fb_footer.png","wb"); 																																					//open image file
-			gdImagePng(gd_image,temp_filehandle);																																										//output gd image to file
-			fclose(temp_filehandle);																																																//close image file
-			gdImageDestroy(gd_image);																																																//free gd image memory
+			temp_filehandle=fopen("fb_footer.png","wb"); //open image file
+			gdImagePng(gd_image,temp_filehandle); //output gd image to file
+			fclose(temp_filehandle); //close image file
+			gdImageDestroy(gd_image); //free gd image memory
 		}
 		//return 0; //debug
 		sleep(update_interval); //sleep
