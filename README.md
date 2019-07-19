@@ -12,7 +12,6 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 
 # Todo
 
-Detect bluetooth devices
 
 # History
 ### info2png:
@@ -28,6 +27,7 @@ Detect bluetooth devices
 - 0.1j : Can monitor PCA9633 pwm value if i2c adress provided via -pca9633adress argument. Can now detect rfkill state of each wireless device to notify user if in "Airplane Mode".
 - 0.1k : Adding -adcoffset argument to set ADC chip error offset, this value can be positive or negative, it is apply to the computed result, not the raw analog reading. Updated CM3 battery curve.
 - 0.2a : Major update, battery data stuff moved to https://github.com/porcinus/FreeplayBatteryDaemon
+- 0.2b : Now detect Bluetooth dongle plus device(s) connected, WiFi fixed/rework.
 
 ### png2fb16 (deprecated, related parts in archive folder):
 - 0.1a : Initial release.
