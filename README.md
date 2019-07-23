@@ -10,8 +10,10 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 
 - img2dispmanx : This file heavily based on https://github.com/hex007/eop , use to display png or jpeg picture to dispmanx.
 
+- freeplay_overlay_config.sh/gpio-input-detect : Configuration utility, Allow end user to set input used to display overlay, enable or disable info2png and nns-overlay-deamon service.
+
+
 # Todo
-Add proper config script for FP platform with input and logic detection.
 
 
 # History
@@ -45,6 +47,10 @@ Add proper config script for FP platform with input and logic detection.
 - 0.1d : Added low battery icon (gpio input if set using -lowbatpin, plus use -lowbatreverselogic if reversed logic).
 - 0.1e : Adapt program to updated img2dispmanx, No more need to set width and height.
 - 0.1f : Now fully work in non blocking mode.
+
+### freeplay_overlay_config.sh/gpio-input-detect
+- 0.1a : Initial release, need to be tested on multiple device.
+
 
 # Provided scripts :
 - compile.sh : Compile all cpp files. Require libgd-dev, zlib1g-dev, libfreetype6-dev, libpng-dev, libjpeg-dev.
