@@ -96,7 +96,7 @@ Don't miss to chmod all .sh files in the folder : chmod 0755 **/*.sh
 ### Overlay is displayed when gpio pin 'not pressed'
 Add argument ' -reverselogic' to nns-overlay-deamon run script line.
 
-### Overlay is displayed low battery icon when low battery gpio pin 'not trigger'
+### Overlay display low battery icon when low battery gpio pin 'not trigger'
 Add argument ' -lowbatreverselogic' to nns-overlay-deamon run script line.
 
 
