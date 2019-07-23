@@ -1,5 +1,7 @@
 Note before start: You have to edit wanted .service and .sh files in order to get script work.
 
+Important note: DO NOT EDIT base.service and base.sh
+
 Choose right file: 
  - info2overlay.sh and info2overlay.service : Default file
 
