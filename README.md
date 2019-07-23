@@ -11,6 +11,7 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 - img2dispmanx : This file heavily based on https://github.com/hex007/eop , use to display png or jpeg picture to dispmanx.
 
 # Todo
+Add proper config script for FP platform with input and logic detection.
 
 
 # History
