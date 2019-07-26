@@ -6,11 +6,11 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 
 - png2fb16 : Copy a png file to a 16 bits framebuffer, to use aside of info2png (deprecated, related parts in archive folder).
 
-- nns-overlay-deamon : Use to monitor a gpio button input to display overlay, can monitor a gpio pin to alert user of a low battery state, to be used aside of info2png, ONLY work with dispmanx driver.
+- nns-overlay-deamon : Use to monitor a gpio button input to display overlay, can monitor a gpio pin to alert user of a low battery state, to be used aside of info2png, ONLY work with dispmanx driver, require WiringPi.
 
 - img2dispmanx : This file heavily based on https://github.com/hex007/eop , use to display png or jpeg picture to dispmanx.
 
-- freeplay_overlay_config.sh/gpio-input-detect : Configuration utility, Allow end user to set input used to display overlay, enable or disable info2png and nns-overlay-deamon service.
+- freeplay_overlay_config.sh/gpio-input-detect : Configuration utility, Allow end user to set input used to display overlay, enable or disable info2png and nns-overlay-deamon service, require WiringPi.
 
 
 # Todo
@@ -47,6 +47,7 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 - 0.1d : Added low battery icon (gpio input if set using -lowbatpin, plus use -lowbatreverselogic if reversed logic).
 - 0.1e : Adapt program to updated img2dispmanx, No more need to set width and height.
 - 0.1f : Now fully work in non blocking mode.
+- 0.1g : Conversion from sysfs to WiringPi to monitor GPIO, more reactive, all overlay now run in non blocking mode, various bugfix.
 
 ### freeplay_overlay_config.sh/gpio-input-detect
 - 0.1a : Initial release, need to be tested on multiple device.
