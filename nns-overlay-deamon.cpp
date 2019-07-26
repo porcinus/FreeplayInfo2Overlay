@@ -21,18 +21,13 @@ const char programversion[]="0.1g";
 FILE *temp_filehandle;								//file handle
 int gpio_pin=41;											//gpio pin
 int gpio_lowbatpin=-1;								//gpio pin for low battery
-char gpio_path[PATH_MAX];							//gpio full path to sysfs
-char gpio_lowbatpath[PATH_MAX];				//gpio full path to sysfs for low battery
 bool gpio_activelow=false;						//gpio active low
 bool gpio_lowbatactivelow=false;			//gpio active low for low battery
 bool gpio_reverselogic=false;					//gpio reverselogic
 bool gpio_lowbatreverselogic=false;		//gpio reverselogic for low battery
-char gpio_buffer[4];									//gpio read buffer
 int gpio_interval=200;								//gpio check interval
 int gpio_value;												//gpio value
 int gpio_lowbatvalue;									//gpio value for low battery
-bool gpio_exported=false;							//gpio is exported?
-bool gpio_lowbatexported=false;				//gpio low battery is exported?
 char png_path[PATH_MAX];							//full path to str file
 bool png_exist=false;									//file exist?
 char program_path[PATH_MAX];					//full path to this program
@@ -94,11 +89,11 @@ int main(int argc, char *argv[]){
 		sleep(2);
 	}
 	
-	if(getAlt(gpio_pin)!=0){fprintf(stderr,"nns-overlay-deamon : Failed, GPIO pin is not a input\n",gpio_buffer);return(1);
+	if(getAlt(gpio_pin)!=0){fprintf(stderr,"nns-overlay-deamon : Failed, GPIO pin is not a input\n");return(1);
 	}else if(!digitalRead(gpio_pin)){gpio_activelow=true;}
 	
 	if(gpio_lowbatpin>-1){
-		if(getAlt(gpio_lowbatpin)!=0){fprintf(stderr,"nns-overlay-deamon : Failed, GPIO low battery pin is not a input\n",gpio_buffer);return(1);
+		if(getAlt(gpio_lowbatpin)!=0){fprintf(stderr,"nns-overlay-deamon : Failed, GPIO low battery pin is not a input\n");return(1);
 		}else if(!digitalRead(gpio_lowbatpin)){gpio_lowbatactivelow=true;}
 	}
 	
