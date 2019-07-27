@@ -62,8 +62,6 @@ void show_usage(void){
 }
 
 int main(int argc, char *argv[]){
-	if(argc<9){show_usage();return 1;} //wrong arguments count
-	
 	strcpy(png_path,"/dev/shm/fb_footer.png"); //init
 	
 	for(int i=1;i<argc;++i){ //argument to variable
