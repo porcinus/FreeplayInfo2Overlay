@@ -31,6 +31,7 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 - 0.1k : Adding -adcoffset argument to set ADC chip error offset, this value can be positive or negative, it is apply to the computed result, not the raw analog reading. Updated CM3 battery curve.
 - 0.2a : Major update, battery data stuff moved to https://github.com/porcinus/FreeplayBatteryDaemon
 - 0.2b : Now detect Bluetooth dongle plus device(s) connected, WiFi fixed/rework.
+- 0.2c : Can now display temperature in Fahrenheit, reworked temperature icons.
 
 ### png2fb16 (deprecated, related parts in archive folder):
 - 0.1a : Initial release.
