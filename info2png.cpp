@@ -3,7 +3,7 @@ NNS @ 2019
 info2png
 It create a PNG file contening CPU load and temperature, Wifi link speed, Bluetooth status and time, Battery voltage is optional.
 */
-const char programversion[]="0.2b"; //program version
+const char programversion[]="0.2c"; //program version
 
 
 #include "gd.h"							//libgd
@@ -133,7 +133,7 @@ const int gd_char_w=5; 							//gd image char width
 int gd_col_black, gd_col_white, gd_col_gray, gd_col_darkgray, gd_col_darkergray, gd_col_green, gd_col_tmp, gd_col_text; //gd colors
 
 char gd_icons[]={ //custom gd font char array 8x8
-0,0,0,0,0,0,0,0, //char 0 : none
+0,0,0,0,0,0,0,0, //char 0x00 : none
 0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,
@@ -142,7 +142,7 @@ char gd_icons[]={ //custom gd font char array 8x8
 0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,
 
-0,0,1,1,1,1,0,0, //char 1 : battery
+0,0,1,1,1,1,0,0, //char 0x01 : battery
 0,1,1,0,0,1,1,0,
 0,1,0,0,0,0,1,0,
 0,1,1,1,1,1,1,0,
@@ -151,7 +151,7 @@ char gd_icons[]={ //custom gd font char array 8x8
 0,1,0,0,0,0,1,0,
 0,1,1,1,1,1,1,0,
 
-0,0,0,0,0,0,0,0, //char 2 : cpu
+0,0,0,0,0,0,0,0, //char 0x02 : cpu
 0,1,0,1,0,1,0,0,
 1,1,1,1,1,1,1,0,
 0,1,0,0,0,1,0,0,
@@ -160,7 +160,7 @@ char gd_icons[]={ //custom gd font char array 8x8
 1,1,1,1,1,1,1,0,
 0,1,0,1,0,1,0,0,
 
-0,0,0,0,0,0,0,0, //char 3 : wifi
+0,0,0,0,0,0,0,0, //char 0x03 : wifi
 0,0,1,0,0,0,0,0,
 0,1,0,1,0,0,0,0,
 0,0,1,0,0,0,1,0,
@@ -169,7 +169,7 @@ char gd_icons[]={ //custom gd font char array 8x8
 0,0,1,0,1,0,1,0,
 0,0,1,0,1,0,1,0,
 
-0,0,1,1,1,1,0,0, //char 4 : clock
+0,0,1,1,1,1,0,0, //char 0x04 : clock
 0,1,0,0,0,0,1,0,
 1,0,0,1,0,0,0,1,
 1,0,0,1,0,0,0,1,
@@ -178,7 +178,7 @@ char gd_icons[]={ //custom gd font char array 8x8
 0,1,0,0,0,0,1,0,
 0,0,1,1,1,1,0,0,
 
-0,0,0,0,1,0,0,0, //char 5 : uptime
+0,0,0,0,1,0,0,0, //char 0x05 : uptime
 0,0,0,1,0,1,0,0,
 0,0,1,0,0,0,1,0,
 0,1,0,0,0,0,0,1,
@@ -187,7 +187,7 @@ char gd_icons[]={ //custom gd font char array 8x8
 0,0,0,1,0,1,0,0,
 0,0,0,1,1,1,0,0,
 
-0,0,0,1,1,1,0,0, //char 6 : backlight
+0,0,0,1,1,1,0,0, //char 0x06 : backlight
 0,0,1,0,0,0,1,0,
 0,1,0,0,0,0,0,1,
 0,1,0,0,1,0,0,1,
@@ -196,7 +196,7 @@ char gd_icons[]={ //custom gd font char array 8x8
 0,0,0,1,0,1,0,0,
 0,0,0,1,1,1,0,0,
 
-0,0,0,0,0,0,0,0, //char 7 : bluetooth
+0,0,0,0,0,0,0,0, //char 0x07 : bluetooth
 0,0,0,0,1,0,0,0,
 0,0,1,0,1,1,0,0,
 0,0,0,1,1,0,1,0,
@@ -206,7 +206,7 @@ char gd_icons[]={ //custom gd font char array 8x8
 0,0,0,0,1,0,0,0,
 
 
-0,0,0,0,0,0,0,0, //char 8 : Mbps0
+0,0,0,0,0,0,0,0, //char 0x08 : Mbps0
 1,0,0,1,0,1,0,0,
 1,1,1,1,0,1,0,0,
 1,0,0,1,0,1,1,1,
@@ -215,17 +215,35 @@ char gd_icons[]={ //custom gd font char array 8x8
 0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,
 
-0,0,0,0,0,0,0,0, //char 9 : Mbps1
+0,0,0,0,0,0,0,0, //char 0x09 : Mbps1
 0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,
 0,1,1,1,0,1,1,0,
 0,1,0,1,0,1,0,1,
 0,1,1,1,0,1,1,1,
 0,1,0,0,0,0,0,0,
-0,1,0,0,0,0,0,0
+0,1,0,0,0,0,0,0,
+
+0,0,0,0,0,0,0,0, //char 0x0A : celsius
+0,0,0,0,0,0,0,0,
+0,1,1,0,0,0,0,0,
+0,1,1,0,0,1,1,0,
+0,0,0,0,1,0,0,0,
+0,0,0,0,1,0,0,0,
+0,0,0,0,1,0,0,0,
+0,0,0,0,0,1,1,0,
+
+0,0,0,0,0,0,0,0, //char 0x0B : fahrenheit
+0,0,0,0,0,0,0,0,
+0,1,1,0,0,0,0,0,
+0,1,1,0,1,1,1,0,
+0,0,0,0,1,0,0,0,
+0,0,0,0,1,1,1,0,
+0,0,0,0,1,0,0,0,
+0,0,0,0,1,0,0,0
 };
 
-gdFont gd_icons_8x8_font_ref = {10,0,8,8,gd_icons}; //declare custom gd font 8x8
+gdFont gd_icons_8x8_font_ref = {12,0,8,8,gd_icons}; //declare custom gd font 8x8
 gdFontPtr gd_icons_8x8_font = &gd_icons_8x8_font_ref; //pointer to custom gd font
 
 int gd_x_current,gd_x_last,gd_x_wifi; //gd x text position
@@ -245,7 +263,7 @@ char pbuffer[20];									//buffer use to read process pipe
 time_t now; 											//current date/time
 tm *ltime; 												//localtime object
 int bluetooth_devices=-1;					//-1:no dongle, devices connected count
-
+bool fahrenheit=false;						//convert temperatures to fahrenheit
 
 //Battery variables
 float vbat_value=-1.;					//battery voltage, used as backup if read fail
@@ -264,6 +282,7 @@ void show_usage(void){
 "\t-width, in px, width of 'fb_footer.png' [Optional, needed for generate png if path to freeplayfbcp.cfg not provided]\n"
 "\t-height, in px, height of 'fb_footer.png' [Optional, needed for generate png]\n"
 "\t-interval, [Optional] drawing interval in sec\n"
+"\t-fahrenheit, [Optional] display temperatures in Fahrenheit\n"
 "\t-ip, [Optional] display IP address instead of link speed\n"
 "\t-notime, [Optional] disable display of time\n"
 "\t-uptime, [Optional] force system uptime instead of time, set by default if no RTC chip detected\n"
@@ -289,6 +308,7 @@ int main(int argc, char* argv[]){
 		}else if(strcmp(argv[i],"-width")==0){gd_image_w=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-height")==0){gd_image_h=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-interval")==0){update_interval=atoi(argv[i+1]);
+		}else if(strcmp(argv[i],"-fahrenheit")==0){fahrenheit=true;
 		}else if(strcmp(argv[i],"-ip")==0){wifi_showip=true;
 		}else if(strcmp(argv[i],"-notime")==0){time_enabled=false;
 		}else if(strcmp(argv[i],"-uptime")==0){uptime_enabled=true;
@@ -521,11 +541,17 @@ int main(int argc, char* argv[]){
 			fgets(cpu_buf, sizeof(cpu_buf),temp_filehandle); //read value
 			fclose(temp_filehandle); //close sys file
 			cpu_value=atoi(cpu_buf)/1000; //compute temperature
-			gd_tmp_charcount=sprintf(gd_chararray,"%i°c",cpu_value); //prepare char array to render
-			gd_col_text=rgbcolorstep(cpu_value,50,80,(int)0x0000ff00,(int)0x00ff0000); //compute int color
+			if(fahrenheit){
+				cpu_value=cpu_value*1.8+32; //convert to fahrenheit
+				gd_col_text=rgbcolorstep(cpu_value,122,176,(int)0x0000ff00,(int)0x00ff0000); //compute int color
+			}else{gd_col_text=rgbcolorstep(cpu_value,50,80,(int)0x0000ff00,(int)0x00ff0000);} //compute int color
+			gd_tmp_charcount=sprintf(gd_chararray,"%i",cpu_value); //prepare char array to render
 			gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current,0,0x02,gd_col_text); //draw cpu icon
 			gdImageString(gd_image,gdFontTiny,gd_x_current+9,1,(unsigned char*)gd_chararray,gd_col_text); //print cpu temp to gd image
-			gd_x_current+=9+(gd_tmp_charcount+1)*gd_char_w; //update x position
+			gd_x_current+=9+(gd_tmp_charcount)*gd_char_w; //update x position
+			if(fahrenheit){gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-1,0,0x0B,gd_col_text);
+			}else{gdImageChar(gd_image,gd_icons_8x8_font,gd_x_current-1,0,0x0A,gd_col_text);}
+			gd_x_current+=gd_char_w+7;
 			gdImageChar(gd_image,gdFontTiny,gd_x_current-gd_char_w,1,0x2F,gd_col_gray); //draw / in gray
 			
 			
