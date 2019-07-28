@@ -118,18 +118,18 @@ int main(int argc, char *argv[]){
 	while(true){
 		tmp_time=time(NULL); //loop start time
 		gpio_value=digitalRead(gpio_pin);
-		if((tmp_time-img2dispmanx_start)>duration && ((gpio_value==0&&(!gpio_activelow&&!gpio_reverselogic||gpio_activelow&&gpio_reverselogic))||(gpio_value==1&&(gpio_activelow&&!gpio_reverselogic||!gpio_activelow&&gpio_reverselogic)))){ //gpio button pressed
-			img2dispmanx_start=tmp_time;
+		if((tmp_time-img2dispmanx_start)>=duration && ((gpio_value==0&&(!gpio_activelow&&!gpio_reverselogic||gpio_activelow&&gpio_reverselogic))||(gpio_value==1&&(gpio_activelow&&!gpio_reverselogic||!gpio_activelow&&gpio_reverselogic)))){ //gpio button pressed
 			chdir(program_path); //change directory
 			system(img2dispmanx_exec_path); //display overlay, non blocking
+			img2dispmanx_start=tmp_time;
 		}
 		
 		if(gpio_lowbatpin>-1){ //low battery enable
 			gpio_lowbatvalue=digitalRead(gpio_lowbatpin);
-			if((tmp_time-icon_lowbat_start)>5 && ((gpio_lowbatvalue==0&&(!gpio_lowbatactivelow&&!gpio_lowbatreverselogic||gpio_lowbatactivelow&&gpio_lowbatreverselogic))||(gpio_lowbatvalue==1&&(gpio_lowbatactivelow&&!gpio_lowbatreverselogic||!gpio_lowbatactivelow&&gpio_lowbatreverselogic)))){ //gpio button pressed
-				icon_lowbat_start=tmp_time;
+			if((tmp_time-icon_lowbat_start)>=5 && ((gpio_lowbatvalue==0&&(!gpio_lowbatactivelow&&!gpio_lowbatreverselogic||gpio_lowbatactivelow&&gpio_lowbatreverselogic))||(gpio_lowbatvalue==1&&(gpio_lowbatactivelow&&!gpio_lowbatreverselogic||!gpio_lowbatactivelow&&gpio_lowbatreverselogic)))){ //gpio button pressed
 				chdir(program_path); //change directory
 				system(icon_lowbat_exec_path); //display lowbat icon, non blocking
+				icon_lowbat_start=tmp_time;
 			}
 		}
 		
@@ -138,16 +138,16 @@ int main(int argc, char *argv[]){
 		fscanf(temp_filehandle, "%i", &rpi_cpu_temp);
 		fclose(temp_filehandle);
 		
-		if((tmp_time-icon_overheat_warn_start)>5 && rpi_cpu_temp>=80000 && rpi_cpu_temp<85000){ //low overheat
-			icon_overheat_warn_start=tmp_time;
+		if((tmp_time-icon_overheat_warn_start)>=5 && rpi_cpu_temp>=80000 && rpi_cpu_temp<85000){ //low overheat
 			chdir(program_path); //change directory
 			system(icon_overheat_warn_exec_path); //display overheat icon, non blocking
+			icon_overheat_warn_start=tmp_time;
 		}
 		
-		if((tmp_time-icon_overheat_max_start)>5 && rpi_cpu_temp>=85000){ //hot overheat
-			icon_overheat_max_start=tmp_time;
+		if((tmp_time-icon_overheat_max_start)>=5 && rpi_cpu_temp>=85000){ //hot overheat
 			chdir(program_path); //change directory
 			system(icon_overheat_max_exec_path); //display overheat icon, non blocking
+			icon_overheat_max_start=tmp_time;
 		}
 		
 		usleep(gpio_interval*1000); //sleep
