@@ -12,6 +12,8 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 
 - freeplay_overlay_config.sh/gpio-input-detect : Configuration utility, Allow end user to set input used to display overlay, enable or disable info2png and nns-overlay-deamon service, require WiringPi.
 
+![Rev 0.2c](https://github.com/porcinus/FreeplayInfo2Overlay/blob/master/demo/overlay-0.2c.jpg)
+
 
 # Todo
 
