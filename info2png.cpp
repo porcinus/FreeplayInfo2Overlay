@@ -94,6 +94,7 @@ bool wifi_showip=false;								//ip address instead of link speed
 bool time_enabled=true;								//display time
 bool uptime_enabled=false;						//display uptime
 bool time_force_enabled=false;				//force time instead of uptime
+bool time_rtc_retry=false;						//allow retry rtc detection
 bool backlight_set=false;							//display backlight info
 bool backlight_enabled=false;					//display backlight info
 bool rfkill_enabled=false;						//rfkill is running
@@ -348,7 +349,7 @@ int main(int argc, char* argv[]){
 	if(uptime_enabled){printf("info2png : Use system uptime instead of time\n");}
 	
 	if(time_enabled&&!uptime_enabled&&!time_force_enabled){ //check if rtc chip is present, force uptime if not
-			if(access("/sys/class/rtc/rtc0",R_OK)!=0){printf("info2png : RTC chip not detected, use system uptime instead of time\n"); uptime_enabled=true;}
+			if(access("/sys/class/rtc/rtc0",R_OK)!=0){printf("info2png : RTC chip not detected, use system uptime instead of time for the moment\n"); uptime_enabled=true; time_rtc_retry=true;}
 	}
 	
 	while(true){
@@ -356,6 +357,10 @@ int main(int argc, char* argv[]){
 		
 		//-----------------------------Start of GD part
 		if(png_enabled){ //png output enable
+			if(uptime_enabled&&time_rtc_retry){
+				if(access("/sys/class/rtc/rtc0",R_OK)==0){printf("info2png : RTC chip detected, switching back to time instead of system uptime\n"); uptime_enabled=false; time_rtc_retry=false;}
+			}
+			
 			if(access(vbat_path,R_OK)!=0){battery_enabled=false;
 			}else{
 				temp_filehandle=fopen(vbat_path,"r"); //open file handle
