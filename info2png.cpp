@@ -3,7 +3,7 @@ NNS @ 2019
 info2png
 It create a PNG file contening CPU load and temperature, Wifi link speed, Bluetooth status and time, Battery voltage is optional.
 */
-const char programversion[]="0.2c"; //program version
+const char programversion[]="0.2d"; //program version
 
 
 #include "gd.h"							//libgd
@@ -82,6 +82,7 @@ int rgbcolorstep(float x,float in_min,float in_max,int color_min,int color_max){
  
 
 //General variables
+bool single_run=false;								//run only once mode
 char data_output_path[PATH_MAX];			//path where output final data
 char freeplaycfg_path[PATH_MAX];			//full path like /boot/freeplayfbcp.cfg
 char vbat_path[PATH_MAX];							//vbat filename
@@ -276,8 +277,9 @@ int battery_percent=-1;				//battery percentage
 void show_usage(void){
 	printf(
 "Version: %s\n"
-"Example : ./info2png -width 304 -height 10 -o \"/dev/shm\"\n"
+"Example : ./info2png -runonce -width 304 -height 10 -o \"/dev/shm\"\n"
 "Options:\n"
+"\t-runonce, assume that program not running as service, run only one loop\n"
 "\t-i2cbus, path to i2c bus device [Optional, needed only for battery voltage monitoring]\n"
 "\t-pca9633adress, [Optional] PCA9633 i2c adress, found via 'i2cdetect'\n"
 "\t-width, in px, width of 'fb_footer.png' [Optional, needed for generate png if path to freeplayfbcp.cfg not provided]\n"
@@ -304,6 +306,7 @@ int main(int argc, char* argv[]){
 	
 	for(int i=1;i<argc;++i){ //argument to variable
 		if(strcmp(argv[i],"-help")==0){show_usage();return 1;
+		}else if(strcmp(argv[i],"-runonce")==0){single_run=true;
 		}else if(strcmp(argv[i],"-i2cbus")==0){strcpy(i2c_bus,argv[i+1]); if(access(i2c_bus,R_OK)!=0){printf("info2png : Failed, %s not readable\n",i2c_bus);return 1;}
 		}else if(strcmp(argv[i],"-pca9633adress")==0){sscanf(argv[i+1], "%x", &backlight_i2c_address); backlight_set=true;
 		}else if(strcmp(argv[i],"-width")==0){gd_image_w=atoi(argv[i+1]);
@@ -335,10 +338,12 @@ int main(int argc, char* argv[]){
 		fclose(temp_filehandle); //close handle
 	}
 	
+	if(single_run){printf("info2png : Runonce set\n");}
+	
 	if(data_output_path==NULL){printf("info2png : Failed, missing output path\n");show_usage();return 1;} //user miss some needed arguments
 	if(gd_image_w<1||gd_image_h<1){printf("info2png : Warning, PNG output disable, missing image width or height.\n");png_enabled=false;} //no png output
 	
-	if(update_interval<1){printf("info2png : Warning, wrong update interval set, setting it to 15sec\n");update_interval=15;} //wrong interval
+	if(update_interval<1&&!single_run){printf("info2png : Warning, wrong update interval set, setting it to 15sec\n");update_interval=15;} //wrong interval
 	
 	if(access("/sbin/iw",F_OK)!=0){printf("info2png : Warning, WIFI link speed detection require 'iw' software\n");}
 	
@@ -661,6 +666,7 @@ int main(int argc, char* argv[]){
 			gdImageDestroy(gd_image); //free gd image memory
 		}
 		//return 0; //debug
+		if(single_run){break;}
 		sleep(update_interval); //sleep
 	}
 	

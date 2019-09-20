@@ -3,7 +3,7 @@ NNS @ 2019
 nns-overlay-deamon
 Use to create a 'OSD' on program running on dispmanx driver
 */
-const char programversion[]="0.1g";
+const char programversion[]="0.1h";
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -15,10 +15,12 @@ const char programversion[]="0.1g";
 #include <limits.h>
 #include <time.h>
 #include <wiringPi.h> //wiringpi
-
+#include <libgen.h>
 
 
 FILE *temp_filehandle;								//file handle
+bool standalone=false;								//standalone mode
+int info2png_height=12;							//standalone overlay height
 int gpio_pin=41;											//gpio pin
 int gpio_lowbatpin=-1;								//gpio pin for low battery
 bool gpio_activelow=false;						//gpio active low
@@ -32,6 +34,8 @@ char png_path[PATH_MAX];							//full path to str file
 bool png_exist=false;									//file exist?
 char program_path[PATH_MAX];					//full path to this program
 int duration=5;												//osd duration
+char info2png_exec_path[PATH_MAX];						//full command line to run info2png
+char *info2png_output_path;										//full path of info2png output
 char img2dispmanx_exec_path[PATH_MAX];				//full command line to run img2dispmanx
 char icon_overheat_max_exec_path[PATH_MAX];		//full command line to run img2dispmanx cpu-overheat-max
 char icon_overheat_warn_exec_path[PATH_MAX];	//full command line to run img2dispmanx cpu-overheat-warning
@@ -45,12 +49,13 @@ int rpi_cpu_temp=0;													//rpi cpu temperature
 
 
 
-
 void show_usage(void){
 	fprintf(stderr,
-"Example : ./nns-overlay-deamon -pin 41 -reverselogic -interval 200 -file \"/dev/shm/fb_footer.png\" -duration 5\n"
+"Example : ./nns-overlay-deamon -standalone -height 12 -pin 41 -reverselogic -interval 200 -file \"/dev/shm/fb_footer.png\" -duration 5\n"
 "Version: %s\n"
 "Options:\n"
+"\t-standalone, assume that info2png not running as service, run it each time GPIO pin is trigger, recommended for Pi Zero user but add 1sec delay to overlay display\n"
+"\t-height, used only in standalone mode, overlay height in px [Default: 12]\n"
 "\t-pin, GPIO pin use to display OSD [Default: 41]\n"
 "\t-reverselogic, optional, reverse activelow logic\n"
 "\t-interval, optional, pin checking interval in msec [Default: 200]\n"
@@ -66,6 +71,8 @@ int main(int argc, char *argv[]){
 	
 	for(int i=1;i<argc;++i){ //argument to variable
 		if(strcmp(argv[i],"-help")==0){show_usage();return 1;
+		}else if(strcmp(argv[i],"-standalone")==0){standalone=true;
+		}else if(strcmp(argv[i],"-height")==0){info2png_height=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-pin")==0){gpio_pin=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-reverselogic")==0){gpio_reverselogic=true;
 		}else if(strcmp(argv[i],"-lowbatpin")==0){gpio_lowbatpin=atoi(argv[i+1]);
@@ -73,6 +80,13 @@ int main(int argc, char *argv[]){
 		}else if(strcmp(argv[i],"-interval")==0){gpio_interval=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-file")==0){strcpy(png_path,argv[i+1]);
 		}else if(strcmp(argv[i],"-duration")==0){duration=atoi(argv[i+1]);}
+	}
+	
+	if(standalone){
+		fprintf(stderr,"nns-overlay-deamon : Running in standalone mode\n");
+		fprintf(stderr,"nns-overlay-deamon : info2png height : %dpx\n",info2png_height);
+		char png_path_tmp[sizeof(png_path)]; strcpy(png_path_tmp,png_path); //backup
+		info2png_output_path=dirname(png_path_tmp); //extract info2png output path
 	}
 	
 	if(gpio_pin<0||duration<0){fprintf(stderr,"nns-overlay-deamon : Failed, missing some arguments\n");show_usage();return 1;} //user miss some needed arguments
@@ -95,13 +109,10 @@ int main(int argc, char *argv[]){
 		}else if(!digitalRead(gpio_lowbatpin)){gpio_lowbatactivelow=true;}
 	}
 	
-	while(!png_exist){
-		if(access(png_path,R_OK)!=0){
+	if(!standalone){
+		while(access(png_path,R_OK)!=0){
 			fprintf(stderr,"nns-overlay-deamon : Failed, %s not readable, retrying in 5sec\n",png_path);
 			sleep(5);
-		}else{
-			fprintf(stderr,"nns-overlay-deamon : %s found\n",png_path);
-			png_exist=true;
 		}
 	}
 	
@@ -110,6 +121,7 @@ int main(int argc, char *argv[]){
 		getcwd(program_path,sizeof(program_path)); //backup program path
 	}
 	
+	if(standalone){sprintf(info2png_exec_path,"%s/info2png -runonce -height %d -o \"%s\" >/dev/null 2>&1",program_path,info2png_height,info2png_output_path);} //parse command line for info2png
 	sprintf(img2dispmanx_exec_path,"%s/img2dispmanx -file \"%s\" -width FILL -layer 20000 -timeout %d  >/dev/null 2>&1 &",program_path,png_path,duration); //parse command line for img2dispmanx
 	sprintf(icon_overheat_max_exec_path,"%s/img2dispmanx -file \"%s/img/cpu-overheat-max.png\" -x 10 -y 60 -width 64 -layer 20002 -timeout 5 >/dev/null 2>&1 &",program_path,program_path); //parse command line for img2dispmanx
 	sprintf(icon_overheat_warn_exec_path,"%s/img2dispmanx -file \"%s/img/cpu-overheat-warning.png\" -x 10 -y 60 -width 64 -layer 20001 -timeout 5 >/dev/null 2>&1 &",program_path,program_path); //parse command line for img2dispmanx
@@ -118,10 +130,16 @@ int main(int argc, char *argv[]){
 	while(true){
 		tmp_time=time(NULL); //loop start time
 		gpio_value=digitalRead(gpio_pin);
+		
 		if((tmp_time-img2dispmanx_start)>=duration && ((gpio_value==0&&(!gpio_activelow&&!gpio_reverselogic||gpio_activelow&&gpio_reverselogic))||(gpio_value==1&&(gpio_activelow&&!gpio_reverselogic||!gpio_activelow&&gpio_reverselogic)))){ //gpio button pressed
 			chdir(program_path); //change directory
-			system(img2dispmanx_exec_path); //display overlay, non blocking
-			img2dispmanx_start=tmp_time;
+			if(standalone){system(info2png_exec_path);} //run info2png, blochink mode
+			if(access(png_path,R_OK)!=0){
+				fprintf(stderr,"nns-overlay-deamon : Can't display, %s not readable\n",png_path);
+			}else{
+				system(img2dispmanx_exec_path); //display overlay, non blocking
+				img2dispmanx_start=tmp_time;
+			}
 		}
 		
 		if(gpio_lowbatpin>-1){ //low battery enable
