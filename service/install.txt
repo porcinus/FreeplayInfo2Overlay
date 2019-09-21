@@ -4,6 +4,7 @@ Important note: DO NOT EDIT base.service and base.sh
 
 Choose right file: 
  - info2overlay.sh and info2overlay.service : Default file
+ - info2overlayzero.sh and info2overlayzero.service : Recommended for Rpi Zero user
 
 To install as a service:
 cp [WANTEDSERVICE].service /lib/systemd/system/[WANTEDSERVICE].service
