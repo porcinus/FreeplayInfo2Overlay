@@ -35,6 +35,7 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 - 0.2b : Now detect Bluetooth dongle plus device(s) connected, WiFi fixed/rework.  
 - 0.2c : Can now display temperature in Fahrenheit, reworked temperature icons.  
 - 0.2d : Can be run once via -runonce argument, used for nns-overlay-deamon in standalone mode.  
+- 0.2e : Partial support for ALSA audio volume detection.  
 
 ### png2fb16 (deprecated, related parts in archive folder):
 - 0.1a : Initial release.  
@@ -53,6 +54,7 @@ These programs are design to work on Raspberry Pi 3 on Freeplay CM3 platform wit
 - 0.1f : Now fully work in non blocking mode.  
 - 0.1g : Conversion from sysfs to WiringPi to monitor GPIO, more reactive, all overlay now run in non blocking mode, various bugfix.  
 - 0.1h : Add a standalone mode that run info2png each time GPIO pin is trigger, recommended for Pi Zero user but add 1sec delay to overlay display, done via -standalone argument. Use -height argument to set info2png output height.  
+- 0.1i : Add ALSA volume and Debug passthru for standalone mode.  
 
 ### freeplay_overlay_config.sh/gpio-input-detect
 - 0.1a : Initial release, need to be tested on multiple device.  
