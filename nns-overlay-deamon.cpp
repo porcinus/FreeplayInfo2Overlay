@@ -3,7 +3,7 @@ NNS @ 2019
 nns-overlay-deamon
 Use to create a 'OSD' on program running on dispmanx driver
 */
-const char programversion[]="0.1h";
+const char programversion[]="0.1i";
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -18,8 +18,12 @@ const char programversion[]="0.1h";
 #include <libgen.h>
 
 
+int debug=0; //program is in debug mode, 0=no 1=full
+#define debug_print(fmt, ...) do { if (debug) fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, ##__VA_ARGS__); } while (0) //Flavor: print advanced debug to stderr
+
 FILE *temp_filehandle;								//file handle
 bool standalone=false;								//standalone mode
+bool alsamixer_enabled=true;					//alsa boolean
 int info2png_height=12;							//standalone overlay height
 int gpio_pin=41;											//gpio pin
 int gpio_lowbatpin=-1;								//gpio pin for low battery
@@ -46,6 +50,8 @@ unsigned long icon_overheat_max_start=0;		//time of last cpu-overheat-max run
 unsigned long icon_overheat_warn_start=0;		//time of last cpu-overheat-warning run
 unsigned long tmp_time=0;										//little opt
 int rpi_cpu_temp=0;													//rpi cpu temperature
+char alsa_card[256];							//alsa card
+char alsa_name[256];							//alsa name
 
 
 
@@ -63,14 +69,21 @@ void show_usage(void){
 "\t-duration, in sec, used for OSD [Default: 5]\n"
 "\t-lowbatpin, optional, GPIO pin used to signal low battery, disable if not set\n"
 "\t-lowbatreverselogic, optional, reverse activelow logic for lowbatpin\n"
+"\t-alsavolume, optional, enable ALSA volume [Default: 0]\n"
+"\t-alsacard, optional, ALSA card [Default: default]\n"
+"\t-alsaname, optional, ALSA selector name [Default: Master]\n"
+"\t-debug, optional, 1=full(will spam logs), 0 if not set\n\n"
 ,programversion);
 }
 
 int main(int argc, char *argv[]){
 	strcpy(png_path,"/dev/shm/fb_footer.png"); //init
+	strcpy(alsa_card,"default"); //init
+	strcpy(alsa_name,"Master"); //init
 	
 	for(int i=1;i<argc;++i){ //argument to variable
 		if(strcmp(argv[i],"-help")==0){show_usage();return 1;
+		}else if(strcmp(argv[i],"-debug")==0){debug=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-standalone")==0){standalone=true;
 		}else if(strcmp(argv[i],"-height")==0){info2png_height=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-pin")==0){gpio_pin=atoi(argv[i+1]);
@@ -78,9 +91,16 @@ int main(int argc, char *argv[]){
 		}else if(strcmp(argv[i],"-lowbatpin")==0){gpio_lowbatpin=atoi(argv[i+1]);
 		}else if(strcmp(argv[i],"-lowbatreverselogic")==0){gpio_lowbatreverselogic=true;
 		}else if(strcmp(argv[i],"-interval")==0){gpio_interval=atoi(argv[i+1]);
+		}else if(strcmp(argv[i],"-alsavolume")==0){if(atoi(argv[i+1])>0){alsamixer_enabled=true;}
+		}else if(strcmp(argv[i],"-alsacard")==0){strcpy(alsa_card,argv[i+1]);alsamixer_enabled=true;
+		}else if(strcmp(argv[i],"-alsaname")==0){strcpy(alsa_name,argv[i+1]);alsamixer_enabled=true;
 		}else if(strcmp(argv[i],"-file")==0){strcpy(png_path,argv[i+1]);
 		}else if(strcmp(argv[i],"-duration")==0){duration=atoi(argv[i+1]);}
 	}
+	
+	if(debug){fprintf(stderr,"nns-overlay-deamon : Running in debug mode\n");}
+	
+	if(alsamixer_enabled){fprintf(stderr,"nns-overlay-deamon : ALSA : %s : %s\n",alsa_card,alsa_name);}
 	
 	if(standalone){
 		fprintf(stderr,"nns-overlay-deamon : Running in standalone mode\n");
@@ -121,7 +141,12 @@ int main(int argc, char *argv[]){
 		getcwd(program_path,sizeof(program_path)); //backup program path
 	}
 	
-	if(standalone){sprintf(info2png_exec_path,"%s/info2png -runonce -height %d -o \"%s\" >/dev/null 2>&1",program_path,info2png_height,info2png_output_path);} //parse command line for info2png
+	sprintf(info2png_exec_path,"%s/info2png -height %d -o \"%s\"",program_path,info2png_height,info2png_output_path); //parse command line for info2png
+	if(standalone){sprintf(info2png_exec_path,"%s -runonce",info2png_exec_path);} //standalone
+	if(debug){sprintf(info2png_exec_path,"%s -debug %d",info2png_exec_path,debug);} //debug
+	if(alsamixer_enabled){sprintf(info2png_exec_path,"%s -alsacard %s -alsaname %s",info2png_exec_path,alsa_card,alsa_name);} //alsa
+	
+	sprintf(info2png_exec_path,"%s >/dev/null 2>&1",info2png_exec_path); //finish build info2png command
 	sprintf(img2dispmanx_exec_path,"%s/img2dispmanx -file \"%s\" -width FILL -layer 20000 -timeout %d  >/dev/null 2>&1 &",program_path,png_path,duration); //parse command line for img2dispmanx
 	sprintf(icon_overheat_max_exec_path,"%s/img2dispmanx -file \"%s/img/cpu-overheat-max.png\" -x 10 -y 60 -width 64 -layer 20002 -timeout 5 >/dev/null 2>&1 &",program_path,program_path); //parse command line for img2dispmanx
 	sprintf(icon_overheat_warn_exec_path,"%s/img2dispmanx -file \"%s/img/cpu-overheat-warning.png\" -x 10 -y 60 -width 64 -layer 20001 -timeout 5 >/dev/null 2>&1 &",program_path,program_path); //parse command line for img2dispmanx
